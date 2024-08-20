@@ -142,10 +142,6 @@ class InGameRenderer {
         row: number, col: number,
     ): void 
     {
-        if (this.piece == null) {
-            return;
-        }
-
         const tl_loc = [
             this.field_x_ndc + this.tile_w_ndc + this.tile_w_ndc * col, 
             this.field_y_ndc + this.tile_h_ndc + this.tile_h_ndc * row
