@@ -160,8 +160,6 @@ class GridMesh {
             }
         }
 
-        console.log (colors);
-
         this.updateColors (gl, colors);
     } 
 }
