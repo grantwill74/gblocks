@@ -23,7 +23,7 @@ const TILE_H_PX = 32;
 
 class InGameRenderer {
     field: GridMesh;
-    piece: GridMesh | null = null;
+    piece: GridMesh;
 
     fringe: GridMesh;
     b_fringe: GridMesh; // bottom fringe
@@ -81,6 +81,14 @@ class InGameRenderer {
             bFringeColors.push (BOTTOM_COLOR);
         }
         this.b_fringe.updateColors (gl, bFringeColors);
+
+        this.piece = new GridMesh (gl, 4, 4, this.fieldProgram);
+        this.piece.updateColorsFromBits (gl, 0, 0);
+    }
+
+    clearField (gl: WebGL2RenderingContext): void {
+        const empty = new Array (this.field_rows * this.field_cols).fill (0);
+        this.updateField (gl, empty);
     }
 
     updateField (gl: WebGL2RenderingContext, newField: number[]): void {
@@ -120,21 +128,37 @@ class InGameRenderer {
         gl.uniform2fv (ul_tl_loc, new Float32Array (tl_loc));
         gl.bindVertexArray (this.b_fringe.vao);
         gl.drawElements (gl.TRIANGLE_STRIP, this.b_fringe.nElems, gl.UNSIGNED_SHORT, 0);
-    
     }
 
-    renderPiece (gl: WebGL2RenderingContext): void {
+    changePiece (
+        gl: WebGL2RenderingContext, 
+        pattern: number, color: number
+    ): void {
+        this.piece.updateColorsFromBits (gl, pattern, color);
+    }
+
+    renderPiece (
+        gl: WebGL2RenderingContext, 
+        row: number, col: number,
+    ): void 
+    {
         if (this.piece == null) {
             return;
         }
 
-        const tl_loc = [-0.0, 0.0];
+        const tl_loc = [
+            this.field_x_ndc + this.tile_w_ndc + this.tile_w_ndc * col, 
+            this.field_y_ndc + this.tile_h_ndc + this.tile_h_ndc * row
+        ];
+
         const tile_dims = [this.tile_w_ndc, this.tile_h_ndc];
+
         gl.useProgram (this.fieldProgram.handle);
         const ul_tl_loc = this.fieldProgram.getUniformLoc ("tl_loc");
         const ul_tile_dims = this.fieldProgram.getUniformLoc ("tile_dims");
         gl.uniform2fv (ul_tl_loc, new Float32Array (tl_loc));
         gl.uniform2fv (ul_tile_dims, new Float32Array (tile_dims));
+
         gl.bindVertexArray (this.piece.vao);
         gl.drawElements (gl.TRIANGLE_STRIP, this.piece.nElems, gl.UNSIGNED_SHORT, 0);
     }

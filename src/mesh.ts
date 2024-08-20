@@ -152,10 +152,15 @@ class GridMesh {
     {
         const colors: number[] = [];
 
-        for (let i = 15; i >= 0; i++) {
-            const entry = color * (bits & (1 << i));
-            colors.push (entry); 
+        for (let row = 0; row < 4; row++) {
+            for (let col = 3; col >= 0; col--) {
+                const bit = (bits & (1 << (row * 4 + col))) ? 1 : 0;
+                const entry = color * bit;
+                colors.push (entry);
+            }
         }
+
+        console.log (colors);
 
         this.updateColors (gl, colors);
     } 
