@@ -57,8 +57,6 @@ async function run(): Promise<void> {
         const field_x_ndc = field_x_px * NDC_PER_PIX_X - 1;
         const field_y_ndc = -field_y_px * NDC_PER_PIX_Y + 1;
 
-        console.log (field_x_px, field_y_px, field_x_ndc, field_y_ndc);
-
         const renderer = new InGameRenderer (
             gl, 
             FIELD_ROWS, FIELD_COLS,
@@ -68,45 +66,10 @@ async function run(): Promise<void> {
         gl.clearColor (0, 0, 0, 1);
         gl.clear (gl.COLOR_BUFFER_BIT);
 
-        const random_colors: number[] = [];
-        for (let row = 0; row < FIELD_ROWS; row++) {
-            for (let col = 0; col < FIELD_COLS; col++) {
-                random_colors.push ( Math.floor (Math.random() * 9) );
-            }
-        }
-
-        renderer.updateField (gl, random_colors);
+        renderer.clearField (gl);
         renderer.renderField (gl);
-        
-        /*
-        const vshader = Webgl2Shader.vertex (gl, V_SHADER);
-        const fshader = Webgl2Shader.fragment (gl, F_SHADER);
-        const gridProgram = new Webgl2Program (gl, vshader, fshader);
-        gl.useProgram (gridProgram.handle);
-
-        assertGlClear (gl.getError());
-
-        // load fixed palette
-        const palletLoc = gridProgram.getUniformLoc ("color_palette");
-        gl.uniform3fv (palletLoc, new Float32Array (PALETTE));
-        assertNoGlError (gl.getError(), FrogErrorKind.LoadingColorPalette);
-
-        console.assert (!gl.getError());
-
-        const piece = new GridMesh (gl, 4, 4, gridProgram);
-        piece.updateColors (gl, [1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]);
-        
-
-        const tl_loc = [-0.0, 0.0];
-        const tile_dims = [TILE_W_NDC, TILE_H_NDC];
-        gl.useProgram (gridProgram.handle);
-        const ul_tl_loc = gridProgram.getUniformLoc ("tl_loc");
-        const ul_tile_dims = gridProgram.getUniformLoc ("tile_dims");
-        gl.uniform2fv (ul_tl_loc, new Float32Array (tl_loc));
-        gl.uniform2fv (ul_tile_dims, new Float32Array (tile_dims));
-        gl.bindVertexArray (piece.vao);
-        gl.drawElements (gl.TRIANGLE_STRIP, piece.nElems, gl.UNSIGNED_SHORT, 0);
-        */
+        renderer.changePiece (gl, PIECE_SHAPES[3][0], 1);
+        renderer.renderPiece (gl, 0, 0);
     }
     catch (err: unknown) {
         if (err instanceof FrogError) {
