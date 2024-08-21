@@ -154,7 +154,8 @@ class GridMesh {
 
         for (let row = 0; row < 4; row++) {
             for (let col = 3; col >= 0; col--) {
-                const bit = (bits & (1 << (row * 4 + col))) ? 1 : 0;
+                const which_bit = ((3 - row ) * 4 + col);
+                const bit = (bits & (1 << which_bit)) ? 1 : 0;
                 const entry = color * bit;
                 colors.push (entry);
             }
