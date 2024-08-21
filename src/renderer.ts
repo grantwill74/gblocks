@@ -140,11 +140,10 @@ class InGameRenderer {
     renderPiece (
         gl: WebGL2RenderingContext, 
         row: number, col: number,
-    ): void 
-    {
+    ): void {
         const tl_loc = [
             this.field_x_ndc + this.tile_w_ndc + this.tile_w_ndc * col, 
-            this.field_y_ndc + this.tile_h_ndc + this.tile_h_ndc * row
+            this.field_y_ndc - this.tile_h_ndc * row
         ];
 
         const tile_dims = [this.tile_w_ndc, this.tile_h_ndc];
