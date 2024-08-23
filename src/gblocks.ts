@@ -65,13 +65,16 @@ async function run(): Promise<void> {
             field_x_ndc, field_y_ndc
         )
 
+        renderer.clearField (gl);
+        renderer.colors[11 * FIELD_COLS] = 7;
+        renderer.updateField (gl);
+
         function render (_now: number) {
             requestAnimationFrame (render);
 
             gl.clearColor (0, 0, 0, 1);
             gl.clear (gl.COLOR_BUFFER_BIT);
     
-            renderer.clearField (gl);
             renderer.renderField (gl);
             renderer.changePiece (gl, PIECE_SHAPES[3][0], 1);
             renderer.renderPiece (gl, 2, 0);

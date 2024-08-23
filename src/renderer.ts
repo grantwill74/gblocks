@@ -25,6 +25,8 @@ class InGameRenderer {
     field: GridMesh;
     piece: GridMesh;
 
+    colors: number[] = new Array <number> (FIELD_ROWS * FIELD_COLS).fill (0);
+
     fringe: GridMesh;
     b_fringe: GridMesh; // bottom fringe
 
@@ -88,11 +90,12 @@ class InGameRenderer {
 
     clearField (gl: WebGL2RenderingContext): void {
         const empty = new Array (this.field_rows * this.field_cols).fill (0);
-        this.updateField (gl, empty);
+        this.colors = empty;
+        this.updateField (gl);
     }
 
-    updateField (gl: WebGL2RenderingContext, newField: number[]): void {
-        this.field.updateColors (gl, newField);
+    updateField (gl: WebGL2RenderingContext): void {
+        this.field.updateColors (gl, this.colors);
     }
 
     renderField (gl: WebGL2RenderingContext): void {
