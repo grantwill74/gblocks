@@ -97,6 +97,8 @@ class InGameState {
                 return;
             }
 
+            this.events |= GameEvent.PieceFall;
+
             // check for collision
             const piece = state.active_piece;
             const shape = piece.state;
