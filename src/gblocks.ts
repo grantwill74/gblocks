@@ -33,6 +33,8 @@ let NDC_PER_PIX_Y: number;
 let TILE_W_NDC: number;
 let TILE_H_NDC: number;
 
+let renderer: InGameRenderer;
+
 async function run(): Promise<void> {
     try {
         const canvas = getCanvasOrThrow();
@@ -63,13 +65,19 @@ async function run(): Promise<void> {
             field_x_ndc, field_y_ndc
         )
 
-        gl.clearColor (0, 0, 0, 1);
-        gl.clear (gl.COLOR_BUFFER_BIT);
+        function render (_now: number) {
+            requestAnimationFrame (render);
 
-        renderer.clearField (gl);
-        renderer.renderField (gl);
-        renderer.changePiece (gl, PIECE_SHAPES[3][0], 1);
-        renderer.renderPiece (gl, 0, 0);
+            gl.clearColor (0, 0, 0, 1);
+            gl.clear (gl.COLOR_BUFFER_BIT);
+    
+            renderer.clearField (gl);
+            renderer.renderField (gl);
+            renderer.changePiece (gl, PIECE_SHAPES[3][0], 1);
+            renderer.renderPiece (gl, 2, 0);
+        }
+
+        render (performance.now());
     }
     catch (err: unknown) {
         if (err instanceof FrogError) {
@@ -85,4 +93,8 @@ async function run(): Promise<void> {
             console.error (err);
         }
     }
+}
+
+function render() {
+
 }
