@@ -192,22 +192,28 @@ class PieceState {
 
     collisionBox(): number[][] {
         const bits = PIECE_SHAPES[this.shape][this.rotation];
-        const box: number[][] = [[]];
 
-        for (let row = 0; row < 4; row++) {
-            const line: number[] = [];
-
-            for (let col = 3; col >= 0; col--) {
-                const which_bit = ((3 - row ) * 4 + col);
-                const bit = (bits & (1 << which_bit)) ? 1 : 0;
-                line.push (bit);
-            }
-
-            box.push (line);
-        }
-
-        return box;
+        return collision_box_from_bits (bits);
     }
+}
+
+function collision_box_from_bits (bits: number): number[][] {
+    const box: number[][] = [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+    ];
+
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+            const which_bit = ((3 - row ) * 4 + col);
+            const bit = (bits & (1 << which_bit)) ? 1 : 0;
+            box [row][col] = bit;
+        }
+    }
+
+    return box;
 }
 
 enum GameCommand {
