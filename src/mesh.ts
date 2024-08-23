@@ -151,13 +151,12 @@ class GridMesh {
         bits: number, color: number): void
     {
         const colors: number[] = [];
+        const box = collision_box_from_bits (bits);
 
         for (let row = 0; row < 4; row++) {
             for (let col = 3; col >= 0; col--) {
-                const which_bit = ((3 - row ) * 4 + col);
-                const bit = (bits & (1 << which_bit)) ? 1 : 0;
-                const entry = color * bit;
-                colors.push (entry);
+                const c = box [row][col] * color;
+                colors.push (c);
             }
         }
 
