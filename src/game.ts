@@ -1,28 +1,162 @@
 const GUTTER_ROWS = 4;
 const FIELD_ROWS = 16;
 const FIELD_COLS = 10;
-const LINECLEAR_DELAY = 1000;
+const LINECLEAR_DELAY_MS = 1000;
 const PREVIEW_PIECES = 3;
+const N_PREVIEWS = 1;
+const TICKS_PER_SEC = 60;
+const SECS_PER_TICK = 1 / TICKS_PER_SEC;
 
 
 /// color pallette index
 type ColorPal = number;
 
 class InGameState {
-    field: number[] = Array <number> (FIELD_ROWS * FIELD_COLS).fill(0);
-
-    active_piece: ActivePieceState | null = null;
+    field: number[] = Array <number> (FIELD_ROWS * FIELD_COLS).fill (0);
 
     previews: PieceState[] = new Array <PieceState>;
 
-    paused: boolean = false;
-    fastfall: boolean = false;
-    lineclear_start: number | null = null;
+    state: GameState_Paused | 
+        GameState_WaitingForPiece | 
+        GameState_Running | 
+        GameState_AfterShock;
 
     commands: GameCommand = GameCommand.Nop;
     events: GameEvent = GameEvent.None;
 
     score: number = 0;
+    drops: number = 0;
+    tick_no: number = 0;
+
+    speed_rows_per_sec: number = 2;
+
+    get secs_per_row(): number {
+        return 1 / this.speed_rows_per_sec;
+    }
+
+    get ticks_per_row(): number {
+        return TICKS_PER_SEC * this.secs_per_row;
+    }
+
+    clearField(): void {
+        this.field = new Array <number> (FIELD_ROWS * FIELD_COLS).fill (0);
+    }
+
+    newPreview(): void {
+        const piece = PieceState.random();
+        this.previews.push (piece);
+    }
+
+    nextPiece(): void {
+        let next_piece = this.previews.shift();
+
+        if (next_piece == undefined) {
+            next_piece = PieceState.random();
+        }
+
+        this.newPreview();
+
+        if (! (this.state instanceof GameState_Running)) {
+            return;
+        }
+
+        this.state.active_piece = 
+            InGameState.createActivePieceState(next_piece);
+    }
+
+    static createActivePieceState(piece: PieceState): ActivePieceState {
+        const pattern = piece.shape;
+        const new_row = - piece_height (pattern);
+        const new_col = 
+            Math.floor (FIELD_COLS / 2) - Math.ceil (piece_width (pattern) / 2);
+        
+        return new ActivePieceState (new_row, new_col, piece);
+    }
+
+    constructor() {
+        for (let i = 0; i < N_PREVIEWS; i++) {
+            this.newPreview();
+        }
+
+        const active_piece = 
+            InGameState.createActivePieceState (PieceState.random());
+        this.state = new GameState_Running (active_piece, 0);
+    }
+
+    tick (): void {
+        this.tick_no++;
+        this.events = 0;
+
+        // ignoring lineclear, fastfall, pausing, and commands
+        
+        if (this.state instanceof GameState_Running) {
+            const state = this.state;
+            
+            // no need for a drop (or to do anything)
+            if (this.tick_no - state.last_drop < this.ticks_per_row) {
+                return;
+            }
+
+            // check for collision
+            const piece = state.active_piece;
+            const shape = piece.state;
+            const potential_row = piece.row + 1;
+            const pattern = PIECE_SHAPES [shape.shape] [shape.rotation];
+            const p_height = piece_height (pattern);
+            const p_width = piece_width (pattern);
+            const box = shape.collisionBox ();
+
+            if (this.hitsFloor (pattern, potential_row, p_height) ||
+                this.hitsBlock (box, potential_row, piece.col, p_width, p_height)) 
+            {
+                this.events |= GameEvent.PieceCollision;
+
+                // copy the blocks over
+                for (let r = 0; r < p_height; r++) {
+                for (let c = 0; c < p_width; c++) {
+                    if (box [r][c]) {
+                        this.field [piece.row * FIELD_COLS + piece.col] = 1;
+                    }
+                } }
+            }
+        }
+
+        this.commands = 0;
+    }
+
+
+    /// determines if the piece will overlap the wall in either direction.
+    hitsWall (pattern: number, col: number, width: number): boolean {
+        return col < 0 || col + width >= FIELD_COLS;
+    }
+
+    /// determines if the piece will overlap the floor.
+    hitsFloor (pattern: number, row: number, height: number): boolean {
+        return row + height >= FIELD_ROWS;
+    }
+
+
+    /// determine if a piece will collide with blocks in the field if it
+    /// reaches the given row and column. 
+    /// assumes that the piece is not out of bounds or else it will crash.
+    hitsBlock (
+        collisionBox: number[][], 
+        row: number, col: number, 
+        piece_width: number, 
+        piece_height: number
+    ): boolean 
+    {
+        const box = collisionBox;
+        
+        for (let r = row; r < row + piece_height; r++) {
+        for (let c = col; c < col + piece_width; c++) {
+            if (box[r][c] && this.field[r * FIELD_COLS + c]) {
+                return true;
+            }
+        } }
+
+        return false;
+    }
 }
 
 class ActivePieceState {
@@ -30,10 +164,10 @@ class ActivePieceState {
     col: number;
     state: PieceState;
 
-    constructor (row: number, col: number, shape: number, rotation: number) {
+    constructor (row: number, col: number, state: PieceState) {
         this.row = row;
         this.col = col;
-        this.state = new PieceState (shape, rotation);
+        this.state = state;
     }
 }
 
@@ -44,6 +178,33 @@ class PieceState {
     constructor (shape: number, rotation: number) {
         this.shape = shape;
         this.rotation = rotation;
+    }
+
+    static random(): PieceState {
+        const which_piece = Math.floor (Math.random() * PIECE_SHAPES.length);
+        const n_rotations = PIECE_SHAPES[which_piece].length;
+        const which_rotation = Math.floor (Math.random() * n_rotations);
+
+        return new PieceState (which_piece, which_rotation);
+    }
+
+    collisionBox(): number[][] {
+        const bits = PIECE_SHAPES[this.shape][this.rotation];
+        const box: number[][] = [[]];
+
+        for (let row = 0; row < 4; row++) {
+            const line: number[] = [];
+
+            for (let col = 3; col >= 0; col--) {
+                const which_bit = ((3 - row ) * 4 + col);
+                const bit = (bits & (1 << which_bit)) ? 1 : 0;
+                line.push (bit);
+            }
+
+            box.push (line);
+        }
+
+        return box;
     }
 }
 
@@ -64,6 +225,53 @@ enum GameEvent {
     PieceRotation = 4,
     LineClear = 8,
     NextPiece = 0x10,
+}
+
+enum GameState {
+    Paused = 0,
+    Running,
+    AfterShock,
+    WaitingForPiece,
+}
+
+class GameState_Paused {
+    tag: GameState = GameState.Paused;
+    prev_state: GameState_Running;
+
+    constructor (prev: GameState_Running) {
+        this.prev_state = prev;
+    }
+}
+class GameState_AfterShock {
+    tag: GameState = GameState.AfterShock;
+    start_tick: number;
+    end_tick: number;
+
+    constructor (start: number, end: number) {
+        this.start_tick = start;
+        this.end_tick = end;
+    }
+}
+class GameState_WaitingForPiece {
+    tag: GameState = GameState.WaitingForPiece;
+    start_tick: number;
+    end_tick: number;
+
+    constructor (start: number, end: number) {
+        this.start_tick = start;
+        this.end_tick = end;
+    }
+}
+class GameState_Running { 
+    tag: GameState = GameState.Running;
+    fast_fall: boolean = false;
+    active_piece: ActivePieceState;
+    last_drop: number;
+
+    constructor (piece: ActivePieceState, last_drop: number) {
+        this.active_piece = piece;
+        this.last_drop = last_drop;
+    }
 }
 
 // encode blocks as 16-bit bitmaps
@@ -115,3 +323,23 @@ const PIECE_SHAPES: number[][] = [
         0x4C80,
     ],
 ]
+
+function piece_height (pattern: number): number {
+    if (pattern & 0x000F) return 4;
+    if (pattern & 0x00F0) return 3;
+    if (pattern & 0x0F00) return 2;
+    if (pattern & 0xF000) return 1;
+
+    console.warn ("piece_height of empty piece? pattern = ", pattern);
+    return 0;
+}
+
+function piece_width (pattern: number): number {
+    if (pattern & 0x1111) return 4;
+    if (pattern & 0x2222) return 3;
+    if (pattern & 0x4444) return 2;
+    if (pattern & 0x8888) return 1;
+
+    console.warn ("piece_width of empty piece? pattern = ", pattern);
+    return 0;
+}
