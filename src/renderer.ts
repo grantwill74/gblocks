@@ -94,6 +94,34 @@ class InGameRenderer {
         this.updateField (gl);
     }
 
+    /// once the piece collides, add it to the colors on the field
+    restPiece (
+        gl: WebGL2RenderingContext, 
+        row: number, col: number, 
+        pattern: number, color: number
+    ): void {
+        // this is actually okay if not true: console.assert (row >= 0);
+        console.assert (col >= 0);
+        console.assert (col + piece_width (pattern) < FIELD_COLS);
+        console.assert (row + piece_height (pattern) < FIELD_ROWS);
+
+        const box = collision_box_from_bits (pattern);
+
+        console.log (pattern);
+        console.log (box);
+
+        for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+            if (row + r >= FIELD_ROWS) { continue; }
+            if (col + c >= FIELD_COLS) { continue; }
+
+            if (box [r][c])
+                this.colors[(row + r) * FIELD_COLS + col + c] = color;
+        } }
+
+        this.updateField (gl);
+    }
+
     updateField (gl: WebGL2RenderingContext): void {
         this.field.updateColors (gl, this.colors);
     }
