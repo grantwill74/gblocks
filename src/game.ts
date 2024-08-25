@@ -207,7 +207,7 @@ function collision_box_from_bits (bits: number): number[][] {
 
     for (let row = 0; row < 4; row++) {
         for (let col = 0; col < 4; col++) {
-            const which_bit = ((3 - row ) * 4 + col);
+            const which_bit = ((3 - row ) * 4 + (3 - col));
             const bit = (bits & (1 << which_bit)) ? 1 : 0;
             box [row][col] = bit;
         }
