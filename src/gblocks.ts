@@ -68,6 +68,8 @@ async function run(): Promise<void> {
         renderer.clearField (gl);
         renderer.colors[11 * FIELD_COLS] = 7;
         renderer.updateField (gl);
+        renderer.changePiece (gl, PIECE_SHAPES[3][0], 1);
+        renderer.restPiece (gl, 12, 4, PIECE_SHAPES[3][0], 1);
 
         function render (_now: number) {
             requestAnimationFrame (render);
@@ -76,8 +78,7 @@ async function run(): Promise<void> {
             gl.clear (gl.COLOR_BUFFER_BIT);
     
             renderer.renderField (gl);
-            renderer.changePiece (gl, PIECE_SHAPES[3][0], 1);
-            renderer.renderPiece (gl, 2, 0);
+            //renderer.renderPiece (gl, 2, 0);
         }
 
         render (performance.now());
