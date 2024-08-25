@@ -59,17 +59,18 @@ async function run(): Promise<void> {
         const field_x_ndc = field_x_px * NDC_PER_PIX_X - 1;
         const field_y_ndc = -field_y_px * NDC_PER_PIX_Y + 1;
 
+        const game = new InGameState (); 
         const renderer = new InGameRenderer (
             gl, 
             FIELD_ROWS, FIELD_COLS,
             field_x_ndc, field_y_ndc
         )
 
-        renderer.clearField (gl);
-        renderer.colors[11 * FIELD_COLS] = 7;
-        renderer.updateField (gl);
-        renderer.changePiece (gl, PIECE_SHAPES[3][0], 1);
-        renderer.restPiece (gl, 12, 4, PIECE_SHAPES[3][0], 1);
+        function tick (_now: number) {
+            setTimeout (tick, SECS_PER_TICK * 1000);
+
+            game.tick();
+        }
 
         function render (_now: number) {
             requestAnimationFrame (render);
@@ -77,10 +78,16 @@ async function run(): Promise<void> {
             gl.clearColor (0, 0, 0, 1);
             gl.clear (gl.COLOR_BUFFER_BIT);
     
-            renderer.renderField (gl);
+            renderer.renderField (gl, game.field);
             //renderer.renderPiece (gl, 2, 0);
         }
 
+        for (let row = 0; row < FIELD_ROWS; row++) {
+        for (let col = 0; col < FIELD_COLS; col++) {
+            game.field [row * FIELD_COLS + col] = Math.floor (Math.random() * 9);
+        }}
+
+        //tick (performance.now());
         render (performance.now());
     }
     catch (err: unknown) {

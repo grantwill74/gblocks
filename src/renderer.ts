@@ -25,8 +25,6 @@ class InGameRenderer {
     field: GridMesh;
     piece: GridMesh;
 
-    colors: number[] = new Array <number> (FIELD_ROWS * FIELD_COLS).fill (0);
-
     fringe: GridMesh;
     b_fringe: GridMesh; // bottom fringe
 
@@ -88,45 +86,9 @@ class InGameRenderer {
         this.piece.updateColorsFromBits (gl, 0, 0);
     }
 
-    clearField (gl: WebGL2RenderingContext): void {
-        const empty = new Array (this.field_rows * this.field_cols).fill (0);
-        this.colors = empty;
-        this.updateField (gl);
-    }
+    renderField (gl: WebGL2RenderingContext, colors: number[]): void {
+        this.field.updateColors (gl, colors);
 
-    /// once the piece collides, add it to the colors on the field
-    restPiece (
-        gl: WebGL2RenderingContext, 
-        row: number, col: number, 
-        pattern: number, color: number
-    ): void {
-        // this is actually okay if not true: console.assert (row >= 0);
-        console.assert (col >= 0);
-        console.assert (col + piece_width (pattern) < FIELD_COLS);
-        console.assert (row + piece_height (pattern) < FIELD_ROWS);
-
-        const box = collision_box_from_bits (pattern);
-
-        console.log (pattern);
-        console.log (box);
-
-        for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 4; c++) {
-            if (row + r >= FIELD_ROWS) { continue; }
-            if (col + c >= FIELD_COLS) { continue; }
-
-            if (box [r][c])
-                this.colors[(row + r) * FIELD_COLS + col + c] = color;
-        } }
-
-        this.updateField (gl);
-    }
-
-    updateField (gl: WebGL2RenderingContext): void {
-        this.field.updateColors (gl, this.colors);
-    }
-
-    renderField (gl: WebGL2RenderingContext): void {
         gl.useProgram (this.fieldProgram.handle);
         const ul_tl_loc = this.fieldProgram.getUniformLoc ("tl_loc");
         const ul_tile_dims = this.fieldProgram.getUniformLoc ("tile_dims");

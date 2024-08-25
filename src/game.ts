@@ -6,7 +6,7 @@ const PREVIEW_PIECES = 3;
 const N_PREVIEWS = 1;
 const TICKS_PER_SEC = 60;
 const SECS_PER_TICK = 1 / TICKS_PER_SEC;
-
+const N_COLORS = 8; // 1 thru 8
 
 /// color pallette index
 type ColorPal = number;
@@ -103,21 +103,19 @@ class InGameState {
             const piece = state.active_piece;
             const shape = piece.state;
             const potential_row = piece.row + 1;
-            const pattern = PIECE_SHAPES [shape.shape] [shape.rotation];
-            const p_height = piece_height (pattern);
-            const p_width = piece_width (pattern);
             const box = shape.collisionBox ();
 
-            if (this.hitsFloor (pattern, potential_row, p_height) ||
-                this.hitsBlock (box, potential_row, piece.col, p_width, p_height)) 
+            if (this.hitsFloor (shape.pattern, potential_row, shape.height) ||
+                this.hitsBlock (box, potential_row, piece.col, shape.width, shape.height)) 
             {
                 this.events |= GameEvent.PieceCollision;
 
                 // copy the blocks over
-                for (let r = 0; r < p_height; r++) {
-                for (let c = 0; c < p_width; c++) {
+                for (let r = 0; r < shape.height; r++) {
+                for (let c = 0; c < shape.width; c++) {
                     if (box [r][c]) {
-                        this.field [piece.row * FIELD_COLS + piece.col] = 1;
+                        this.field [piece.row * FIELD_COLS + piece.col] = 
+                            shape.color;
                     }
                 } }
             }
@@ -137,7 +135,6 @@ class InGameState {
         return row + height >= FIELD_ROWS;
     }
 
-
     /// determine if a piece will collide with blocks in the field if it
     /// reaches the given row and column. 
     /// assumes that the piece is not out of bounds or else it will crash.
@@ -150,8 +147,8 @@ class InGameState {
     {
         const box = collisionBox;
         
-        for (let r = row; r < row + piece_height; r++) {
-        for (let c = col; c < col + piece_width; c++) {
+        for (let r = 0; r < piece_height; r++) {
+        for (let c = 0; c < piece_width; c++) {
             if (box[r][c] && this.field[r * FIELD_COLS + c]) {
                 return true;
             }
@@ -176,24 +173,34 @@ class ActivePieceState {
 class PieceState {
     shape: number;
     rotation: number;
+    color: number;
 
-    constructor (shape: number, rotation: number) {
+    width: number;
+    height: number;
+    
+    get pattern (): number {
+        return PIECE_SHAPES[this.shape][this.rotation];
+    }
+
+    constructor (shape: number, rotation: number, color: number) {
         this.shape = shape;
         this.rotation = rotation;
+        this.color = color;
+        this.width = piece_width (this.pattern);
+        this.height = piece_height (this.pattern);
     }
 
     static random(): PieceState {
         const which_piece = Math.floor (Math.random() * PIECE_SHAPES.length);
         const n_rotations = PIECE_SHAPES[which_piece].length;
         const which_rotation = Math.floor (Math.random() * n_rotations);
+        const which_color = Math.floor (Math.random() * 8) + 1;
 
-        return new PieceState (which_piece, which_rotation);
+        return new PieceState (which_piece, which_rotation, which_color);
     }
 
     collisionBox(): number[][] {
-        const bits = PIECE_SHAPES[this.shape][this.rotation];
-
-        return collision_box_from_bits (bits);
+        return collision_box_from_bits (this.pattern);
     }
 }
 
@@ -338,7 +345,7 @@ function piece_height (pattern: number): number {
     if (pattern & 0x0F00) return 2;
     if (pattern & 0xF000) return 1;
 
-    console.warn ("piece_height of empty piece? pattern = ", pattern);
+    console.assert (false, "piece_height of empty piece? pattern = ", pattern)
     return 0;
 }
 
@@ -348,6 +355,6 @@ function piece_width (pattern: number): number {
     if (pattern & 0x4444) return 2;
     if (pattern & 0x8888) return 1;
 
-    console.warn ("piece_width of empty piece? pattern = ", pattern);
+    console.assert (false, "piece_width of empty piece? pattern = ", pattern)
     return 0;
 }
