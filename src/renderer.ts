@@ -133,6 +133,7 @@ class InGameRenderer {
     renderPiece (
         gl: WebGL2RenderingContext, 
         row: number, col: number,
+        pattern: number, color: number
     ): void {
         const tl_loc = [
             this.field_x_ndc + this.tile_w_ndc + this.tile_w_ndc * col, 
@@ -140,6 +141,8 @@ class InGameRenderer {
         ];
 
         const tile_dims = [this.tile_w_ndc, this.tile_h_ndc];
+
+        this.piece.updateColorsFromBits (gl, pattern, color);
 
         gl.useProgram (this.fieldProgram.handle);
         const ul_tl_loc = this.fieldProgram.getUniformLoc ("tl_loc");

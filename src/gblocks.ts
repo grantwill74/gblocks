@@ -77,17 +77,21 @@ async function run(): Promise<void> {
 
             gl.clearColor (0, 0, 0, 1);
             gl.clear (gl.COLOR_BUFFER_BIT);
-    
+
             renderer.renderField (gl, game.field);
-            //renderer.renderPiece (gl, 2, 0);
+
+            if (game.state instanceof GameState_Running) {
+                const state = game.state;
+                renderer.renderPiece (gl, 
+                    state.active_piece.row,
+                    state.active_piece.col,
+                    state.active_piece.state.pattern,
+                    state.active_piece.state.color
+                );
+            }
         }
 
-        for (let row = 0; row < FIELD_ROWS; row++) {
-        for (let col = 0; col < FIELD_COLS; col++) {
-            game.field [row * FIELD_COLS + col] = Math.floor (Math.random() * 9);
-        }}
-
-        //tick (performance.now());
+        tick (performance.now());
         render (performance.now());
     }
     catch (err: unknown) {
