@@ -98,6 +98,7 @@ class InGameState {
             }
 
             this.events |= GameEvent.PieceFall;
+            state.last_drop = this.tick_no;
 
             // check for collision
             const piece = state.active_piece;
@@ -119,6 +120,11 @@ class InGameState {
                     }
                 } }
             }
+            else {
+                piece.row++;
+            }
+
+            this.tick_no++;
         }
 
         this.commands = 0;
@@ -346,6 +352,7 @@ function piece_height (pattern: number): number {
     if (pattern & 0xF000) return 1;
 
     console.assert (false, "piece_height of empty piece? pattern = ", pattern)
+    throw new Error ('give me a stack trace');
     return 0;
 }
 
@@ -356,5 +363,6 @@ function piece_width (pattern: number): number {
     if (pattern & 0x8888) return 1;
 
     console.assert (false, "piece_width of empty piece? pattern = ", pattern)
+    throw new Error ('give me a stack trace');
     return 0;
 }
