@@ -356,7 +356,6 @@ function piece_height (pattern: number): number {
 
     console.assert (false, "piece_height of empty piece? pattern = ", pattern)
     throw new Error ('give me a stack trace');
-    return 0;
 }
 
 function piece_width (pattern: number): number {
@@ -367,5 +366,4 @@ function piece_width (pattern: number): number {
 
     console.assert (false, "piece_width of empty piece? pattern = ", pattern)
     throw new Error ('give me a stack trace');
-    return 0;
 }
