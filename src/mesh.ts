@@ -154,7 +154,7 @@ class GridMesh {
         const box = collision_box_from_bits (bits);
 
         for (let row = 0; row < 4; row++) {
-            for (let col = 3; col >= 0; col--) {
+            for (let col = 0; col < 4; col++) {
                 const c = box [row][col] * color;
                 colors.push (c);
             }
