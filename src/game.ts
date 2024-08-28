@@ -18,7 +18,6 @@ class InGameState {
     previews: PieceState[] = new Array <PieceState>;
 
     state: GameState_Paused | 
-        GameState_WaitingForPiece | 
         GameState_Running | 
         GameState_AfterShock;
 
@@ -270,16 +269,6 @@ class GameState_Paused {
 }
 class GameState_AfterShock {
     tag: GameState = GameState.AfterShock;
-    start_tick: number;
-    end_tick: number;
-
-    constructor (start: number, end: number) {
-        this.start_tick = start;
-        this.end_tick = end;
-    }
-}
-class GameState_WaitingForPiece {
-    tag: GameState = GameState.WaitingForPiece;
     start_tick: number;
     end_tick: number;
 
