@@ -47,7 +47,7 @@ class InGameState {
         this.previews.push (piece);
     }
 
-    nextPiece(): void {
+    nextPiece(): PieceState {
         let next_piece = this.previews.shift();
 
         if (next_piece == undefined) {
@@ -56,12 +56,7 @@ class InGameState {
 
         this.newPreview();
 
-        if (! (this.state instanceof GameState_Running)) {
-            return;
-        }
-
-        this.state.active_piece = 
-            InGameState.createActivePieceState(next_piece);
+        return next_piece;
     }
 
     static createActivePieceState(piece: PieceState): ActivePieceState {
@@ -91,7 +86,12 @@ class InGameState {
         if (this.state instanceof GameState_AfterShock) {
             const state = this.state;
 
-
+            // transition back to piece fall
+            if (this.tick_no >= state.start_tick) {
+                const piece = this.nextPiece();
+                const active = InGameState.createActivePieceState (piece);
+                this.state = new GameState_Running (active, this.tick_no);
+            }
         }
         else if (this.state instanceof GameState_Running) {
             const state = this.state;
