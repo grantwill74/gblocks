@@ -66,7 +66,7 @@ class InGameState {
     }
 
     static createActivePieceState(piece: PieceState): ActivePieceState {
-        const pattern = piece.shape;
+        const pattern = piece.pattern;
         const new_row = - piece_height (pattern);
         const new_col = 
             Math.floor (FIELD_COLS / 2) - Math.ceil (piece_width (pattern) / 2);
