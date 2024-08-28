@@ -190,6 +190,10 @@ const F_SHADER =
     out vec4 fragcolor;
 
     void main() {
+        if (v_palette_index == uint (0)) {
+            discard;
+        }
+        
         fragcolor = vec4 (color_palette[v_palette_index], 1.0);
     }
 `;
