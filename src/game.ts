@@ -89,8 +89,12 @@ class InGameState {
         this.events = 0;
 
         // ignoring lineclear, fastfall, pausing, and commands
-        
-        if (this.state instanceof GameState_Running) {
+        if (this.state instanceof GameState_AfterShock) {
+            const state = this.state;
+
+
+        }
+        else if (this.state instanceof GameState_Running) {
             const state = this.state;
             
             // no need for a drop (or to do anything)
@@ -126,8 +130,6 @@ class InGameState {
             else {
                 piece.row++;
             }
-
-            this.tick_no++;
         }
 
         this.commands = 0;
