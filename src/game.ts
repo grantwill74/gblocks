@@ -159,7 +159,7 @@ class InGameState {
         
         for (let r = 0; r < piece_height; r++) {
         for (let c = 0; c < piece_width; c++) {
-            if (box[r][c] && this.field[r * FIELD_COLS + c]) {
+            if (box[r][c] && this.field[(row + r) * FIELD_COLS + (col + c)]) {
                 return true;
             }
         } }
