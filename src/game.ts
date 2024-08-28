@@ -7,6 +7,7 @@ const N_PREVIEWS = 1;
 const TICKS_PER_SEC = 60;
 const SECS_PER_TICK = 1 / TICKS_PER_SEC;
 const N_COLORS = 8; // 1 thru 8
+const AFTERSHOCK_TICKS = Math.ceil (TICKS_PER_SEC * 0.75);
 
 /// color pallette index
 type ColorPal = number;
@@ -112,13 +113,15 @@ class InGameState {
                 this.events |= GameEvent.PieceCollision;
 
                 // copy the blocks over
-                for (let r = 0; r < shape.height; r++) {
-                for (let c = 0; c < shape.width; c++) {
+                for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
                     if (box [r][c]) {
-                        this.field [piece.row * FIELD_COLS + piece.col] = 
+                        this.field [(piece.row + r) * FIELD_COLS + (piece.col + c)] = 
                             shape.color;
                     }
                 } }
+
+                this.state = new GameState_AfterShock (this.tick_no, AFTERSHOCK_TICKS);
             }
             else {
                 piece.row++;
@@ -138,7 +141,7 @@ class InGameState {
 
     /// determines if the piece will overlap the floor.
     hitsFloor (pattern: number, row: number, height: number): boolean {
-        return row + height >= FIELD_ROWS;
+        return row + height > FIELD_ROWS;
     }
 
     /// determine if a piece will collide with blocks in the field if it
