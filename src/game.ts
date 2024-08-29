@@ -8,6 +8,7 @@ const TICKS_PER_SEC = 60;
 const SECS_PER_TICK = 1 / TICKS_PER_SEC;
 const N_COLORS = 8; // 1 thru 8
 const AFTERSHOCK_TICKS = Math.ceil (TICKS_PER_SEC * 0.75);
+const FAST_FALL_SPEED_MULT = 2;
 
 /// color pallette index
 type ColorPal = number;
@@ -95,9 +96,20 @@ class InGameState {
         }
         else if (this.state instanceof GameState_Running) {
             const state = this.state;
+
+            const ff_start = !! (this.commands & GameCommand.FastFallStart);
+            const ff_stop = !! (this.commands & GameCommand.FastFallStop);
+            state.fast_fall ||= ff_start;
+            state.fast_fall &&= ff_stop; // wrong
+            const drop_speed_factor = (state.fast_fall ? FAST_FALL_SPEED_MULT : 1);
+
+            if (ff_start) console.log ('!!!!!!');
+            if (ff_stop) console.log ('???????');
+
+            const delay = this.ticks_per_row / drop_speed_factor;
             
             // no need for a drop (or to do anything)
-            if (this.tick_no - state.last_drop < this.ticks_per_row) {
+            if (this.tick_no - state.last_drop < delay) {
                 return;
             }
 

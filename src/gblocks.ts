@@ -91,6 +91,25 @@ async function run(): Promise<void> {
             }
         }
 
+        function handleKeydown (event: KeyboardEvent) {
+            switch (event.code) {
+                case 'ArrowDown': 
+                    game.commands |= GameCommand.FastFallStart;
+                    break;
+            }
+        }
+
+        function handleKeyup (event: KeyboardEvent) {
+            switch (event.code) {
+                case 'ArrowDown': 
+                    game.commands |= GameCommand.FastFallStop;
+                    break;
+            }
+        }
+
+        document.addEventListener ('keydown', handleKeydown);
+        document.addEventListener ('keyup', handleKeyup);
+
         tick (performance.now());
         render (performance.now());
     }
