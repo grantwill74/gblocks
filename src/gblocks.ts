@@ -65,11 +65,17 @@ async function run(): Promise<void> {
             FIELD_ROWS, FIELD_COLS,
             field_x_ndc, field_y_ndc
         )
+        const keys = new Keyboard ();
 
         function tick (_now: number) {
             setTimeout (tick, SECS_PER_TICK * 1000);
+            let commands = 0;
 
-            game.tick();
+            if (keys.isKeyDown ('ArrowDown')) {
+                commands |= GameCommand.FastFall;
+            }
+
+            game.tick (commands);
         }
 
         function render (_now: number) {
@@ -90,25 +96,6 @@ async function run(): Promise<void> {
                 );
             }
         }
-
-        function handleKeydown (event: KeyboardEvent) {
-            switch (event.code) {
-                case 'ArrowDown': 
-                    game.commands |= GameCommand.FastFallStart;
-                    break;
-            }
-        }
-
-        function handleKeyup (event: KeyboardEvent) {
-            switch (event.code) {
-                case 'ArrowDown': 
-                    game.commands |= GameCommand.FastFallStop;
-                    break;
-            }
-        }
-
-        document.addEventListener ('keydown', handleKeydown);
-        document.addEventListener ('keyup', handleKeyup);
 
         tick (performance.now());
         render (performance.now());
