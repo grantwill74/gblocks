@@ -95,6 +95,7 @@ class InGameState {
         }
         else if (this.state instanceof GameState_Running) {
             const state = this.state;
+
             const fast_fall = !! (commands & GameCommand.FastFall);
             const drop_speed_factor = (fast_fall ? FAST_FALL_SPEED_MULT : 1);
 
@@ -105,12 +106,21 @@ class InGameState {
                 return;
             }
 
+            const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
+            const move_right = !! (commands & GameCommand.MoveRight) ? 1 : 0;
+            const move_vec = move_left + move_right;
+            const potential_col = state.active_piece.col + move_vec;
+
+            const piece = state.active_piece;
+            const shape = piece.state;
+
+            if (!this.hitsWall (shape.pattern, potential_col, shape.width)) {
+                piece.col = potential_col;
+            }
+
             this.events |= GameEvent.PieceFall;
             state.last_drop = this.tick_no;
 
-            // check for collision
-            const piece = state.active_piece;
-            const shape = piece.state;
             const potential_row = piece.row + 1;
             const box = shape.collisionBox ();
 
@@ -139,7 +149,7 @@ class InGameState {
 
     /// determines if the piece will overlap the wall in either direction.
     hitsWall (pattern: number, col: number, width: number): boolean {
-        return col < 0 || col + width >= FIELD_COLS;
+        return col < 0 || col + width > FIELD_COLS;
     }
 
     /// determines if the piece will overlap the floor.
@@ -242,6 +252,8 @@ enum GameCommand {
     FastFall = 4,
     Pause = 0x10,
     Unpause = 0x20,
+    MoveLeft = 0x40,
+    MoveRight = 0x80,
 }
 
 enum GameEvent {

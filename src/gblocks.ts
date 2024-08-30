@@ -74,6 +74,12 @@ async function run(): Promise<void> {
             if (keys.isKeyDown ('ArrowDown')) {
                 commands |= GameCommand.FastFall;
             }
+            if (keys.isKeyDown ('ArrowLeft')) {
+                commands |= GameCommand.MoveLeft;
+            }
+            if (keys.isKeyDown ('ArrowRight')) {
+                commands |= GameCommand.MoveRight;
+            }
 
             game.tick (commands);
         }
