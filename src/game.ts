@@ -270,10 +270,10 @@ enum GameCommand {
     PieceRotateR = 1,
     PieceRotateL = 2,
     FastFall = 4,
-    Pause = 0x10,
-    Unpause = 0x20,
-    MoveLeft = 0x40,
-    MoveRight = 0x80,
+    Pause = 8,
+    Unpause = 0x10,
+    MoveLeft = 0x20,
+    MoveRight = 0x40,
 }
 
 enum GameEvent {
