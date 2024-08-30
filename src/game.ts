@@ -105,6 +105,7 @@ class InGameState {
             state.waiting_to_move ||= !! (commands & GameCommand.MoveRight);
             const time_since_last_horiz_move = this.tick_no - state.last_horiz_move;
 
+            // handle horizontal moves
             if (state.waiting_to_move && 
                (time_since_last_horiz_move >= HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)
             ) {
@@ -126,16 +127,50 @@ class InGameState {
                 state.waiting_to_move = false;
             }
 
+            const rotate_left = !! (commands & GameCommand.PieceRotateL);
+            const rotate_right = !! (commands & GameCommand.PieceRotateR);
+            let rotate_command = rotate_left || rotate_right;
+
+            if (!rotate_command) {
+                state.already_rotated = false;
+            }
+            // handle rotations
+            else if (rotate_left != rotate_right) {
+                const n_rotations = PIECE_SHAPES [shape.shape].length;
+                let which_rotation = shape.rotation;
+
+                if (rotate_left) {
+                    which_rotation = 
+                        (which_rotation + (n_rotations - 1)) % n_rotations;
+                }
+                else {
+                    which_rotation = (which_rotation + 1) % n_rotations;
+                }
+
+                const potential_shape = 
+                    new PieceState (shape.shape, which_rotation, shape.color);
+                const box = potential_shape.collisionBox();
+                
+                const hits_block = this.hitsBlock (
+                    box, piece.row, piece.col, shape.width, shape.height)
+                
+                if (!hits_block) {
+                    piece.state.rotation = which_rotation;
+                }
+            }
+
+
             const fast_fall = !! (commands & GameCommand.FastFall);
             const drop_speed_factor = (fast_fall ? FAST_FALL_SPEED_MULT : 1);
 
             const delay = this.ticks_per_row / drop_speed_factor;
             
-            // no need for a drop (or to do anything)
+            // no need for a drop (or to do anything else)
             if (this.tick_no - state.last_drop < delay) {
                 return;
             }
 
+            // handle vertical moves
             this.events |= GameEvent.PieceFall;
             state.last_drop = this.tick_no;
 
@@ -318,7 +353,11 @@ class GameState_Running {
 
     // if the player presses left or right once, even for a single tick, 
     // we want to be guaranteed to move. 
-    waiting_to_move: boolean; 
+    waiting_to_move: boolean = false; 
+
+    // once the player has rotated, wait until they press again.
+    // cleared when the tick command does not include a rotation.
+    already_rotated: boolean = false;
 
     constructor (
         piece: ActivePieceState, 
@@ -327,7 +366,6 @@ class GameState_Running {
         this.active_piece = piece;
         this.last_drop = start_ticks;
         this.last_horiz_move = start_ticks;
-        this.waiting_to_move = false;
     }
 }
 

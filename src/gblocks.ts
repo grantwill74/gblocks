@@ -80,6 +80,12 @@ async function run(): Promise<void> {
             if (keys.isKeyDown ('ArrowRight')) {
                 commands |= GameCommand.MoveRight;
             }
+            if (keys.isKeyDown ('KeyZ') || keys.isKeyDown ('ArrowUp')) {
+                commands |= GameCommand.PieceRotateL;
+            }
+            if (keys.isKeyDown ('KeyX')) {
+                commands |= GameCommand.PieceRotateR;
+            }
 
             game.tick (commands);
         }
