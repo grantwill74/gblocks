@@ -9,6 +9,9 @@ const SECS_PER_TICK = 1 / TICKS_PER_SEC;
 const N_COLORS = 8; // 1 thru 8
 const AFTERSHOCK_TICKS = Math.ceil (TICKS_PER_SEC * 0.75);
 const FAST_FALL_SPEED_MULT = 16;
+const HORIZ_MOVE_SPEED_BLOCKS_PER_SEC = 12;
+const HORIZ_MOVE_SPEED_TICKS_PER_BLOCK = 
+    1 / HORIZ_MOVE_SPEED_BLOCKS_PER_SEC / SECS_PER_TICK;
 
 /// color pallette index
 type ColorPal = number;
@@ -95,6 +98,23 @@ class InGameState {
         }
         else if (this.state instanceof GameState_Running) {
             const state = this.state;
+            const piece = state.active_piece;
+            const shape = piece.state;
+
+            if (this.tick_no - state.last_horiz_move >= 
+                HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)
+            {
+                const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
+                const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
+                const move_vec = move_left + move_right;
+                const potential_col = state.active_piece.col + move_vec;
+
+                if (!this.hitsWall (shape.pattern, potential_col, shape.width)) {
+                    piece.col = potential_col;
+                }
+
+                state.last_horiz_move = this.tick_no;
+            }
 
             const fast_fall = !! (commands & GameCommand.FastFall);
             const drop_speed_factor = (fast_fall ? FAST_FALL_SPEED_MULT : 1);
@@ -106,17 +126,6 @@ class InGameState {
                 return;
             }
 
-            const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
-            const move_right = !! (commands & GameCommand.MoveRight) ? 1 : 0;
-            const move_vec = move_left + move_right;
-            const potential_col = state.active_piece.col + move_vec;
-
-            const piece = state.active_piece;
-            const shape = piece.state;
-
-            if (!this.hitsWall (shape.pattern, potential_col, shape.width)) {
-                piece.col = potential_col;
-            }
 
             this.events |= GameEvent.PieceFall;
             state.last_drop = this.tick_no;
@@ -294,10 +303,15 @@ class GameState_Running {
     tag: GameState = GameState.Running;
     active_piece: ActivePieceState;
     last_drop: number;
+    last_horiz_move: number;
 
-    constructor (piece: ActivePieceState, last_drop: number) {
+    constructor (
+        piece: ActivePieceState, 
+        start_ticks: number,
+    ) {
         this.active_piece = piece;
-        this.last_drop = last_drop;
+        this.last_drop = start_ticks;
+        this.last_horiz_move = start_ticks;
     }
 }
 
