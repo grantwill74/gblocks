@@ -135,8 +135,8 @@ class InGameState {
                 state.already_rotated = false;
             }
             // handle rotations
-            else if (rotate_left != rotate_right) {
-                const n_rotations = PIECE_SHAPES [shape.shape].length;
+            else if (rotate_left != rotate_right && !state.already_rotated) {
+                const n_rotations = PIECE_SHAPES[shape.shape].length;
                 let which_rotation = shape.rotation;
 
                 if (rotate_left) {
@@ -157,6 +157,8 @@ class InGameState {
                 if (!hits_block) {
                     piece.state.rotation = which_rotation;
                 }
+
+                state.already_rotated = true;
             }
 
 
