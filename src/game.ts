@@ -100,20 +100,30 @@ class InGameState {
             const state = this.state;
             const piece = state.active_piece;
             const shape = piece.state;
+            const box = shape.collisionBox ();
+            state.waiting_to_move ||= !! (commands & GameCommand.MoveLeft);
+            state.waiting_to_move ||= !! (commands & GameCommand.MoveRight);
+            const time_since_last_horiz_move = this.tick_no - state.last_horiz_move;
 
-            if (this.tick_no - state.last_horiz_move >= 
-                HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)
-            {
+            if (state.waiting_to_move && 
+               (time_since_last_horiz_move >= HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)
+            ) {
                 const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
                 const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
                 const move_vec = move_left + move_right;
                 const potential_col = state.active_piece.col + move_vec;
 
-                if (!this.hitsWall (shape.pattern, potential_col, shape.width)) {
+                const hits_wall = this.hitsWall (
+                    shape.pattern, potential_col, shape.width);
+                const hits_field = this.hitsBlock (
+                    box, piece.row, potential_col, shape.width, shape.height);
+
+                if (!hits_wall && !hits_field) {
                     piece.col = potential_col;
                 }
 
                 state.last_horiz_move = this.tick_no;
+                state.waiting_to_move = false;
             }
 
             const fast_fall = !! (commands & GameCommand.FastFall);
@@ -126,24 +136,25 @@ class InGameState {
                 return;
             }
 
-
             this.events |= GameEvent.PieceFall;
             state.last_drop = this.tick_no;
 
             const potential_row = piece.row + 1;
-            const box = shape.collisionBox ();
+            const hits_floor = this.hitsFloor (
+                shape.pattern, potential_row, shape.height);
+            const hits_block = this.hitsBlock (
+                box, potential_row, piece.col, shape.width, shape.height)
 
-            if (this.hitsFloor (shape.pattern, potential_row, shape.height) ||
-                this.hitsBlock (box, potential_row, piece.col, shape.width, shape.height)) 
-            {
+            if (hits_floor || hits_block) {
                 this.events |= GameEvent.PieceCollision;
 
                 // copy the blocks over
                 for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 4; c++) {
                     if (box [r][c]) {
-                        this.field [(piece.row + r) * FIELD_COLS + (piece.col + c)] = 
-                            shape.color;
+                        const block_index = 
+                            (piece.row + r) * FIELD_COLS + (piece.col + c);
+                        this.field [block_index] = shape.color;
                     }
                 } }
 
@@ -305,6 +316,10 @@ class GameState_Running {
     last_drop: number;
     last_horiz_move: number;
 
+    // if the player presses left or right once, even for a single tick, 
+    // we want to be guaranteed to move. 
+    waiting_to_move: boolean; 
+
     constructor (
         piece: ActivePieceState, 
         start_ticks: number,
@@ -312,6 +327,7 @@ class GameState_Running {
         this.active_piece = piece;
         this.last_drop = start_ticks;
         this.last_horiz_move = start_ticks;
+        this.waiting_to_move = false;
     }
 }
 
