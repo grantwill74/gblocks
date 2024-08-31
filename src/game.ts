@@ -139,7 +139,7 @@ class InGameState {
                 const n_rotations = PIECE_SHAPES[shape.shape].length;
                 let which_rotation = shape.rotation;
 
-                if (rotate_left) {
+                if (rotate_right) {
                     which_rotation = 
                         (which_rotation + (n_rotations - 1)) % n_rotations;
                 }
