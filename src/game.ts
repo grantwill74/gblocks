@@ -100,32 +100,6 @@ class InGameState {
             const state = this.state;
             const piece = state.active_piece;
             const shape = piece.state;
-            const box = shape.collisionBox ();
-            state.waiting_to_move ||= !! (commands & GameCommand.MoveLeft);
-            state.waiting_to_move ||= !! (commands & GameCommand.MoveRight);
-            const time_since_last_horiz_move = this.tick_no - state.last_horiz_move;
-
-            // handle horizontal moves
-            if (state.waiting_to_move && 
-               (time_since_last_horiz_move >= HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)
-            ) {
-                const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
-                const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
-                const move_vec = move_left + move_right;
-                const potential_col = state.active_piece.col + move_vec;
-
-                const hits_wall = this.hitsWall (
-                    shape.pattern, potential_col, shape.width);
-                const hits_field = this.hitsBlock (
-                    box, piece.row, potential_col, shape.width, shape.height);
-
-                if (!hits_wall && !hits_field) {
-                    piece.col = potential_col;
-                }
-
-                state.last_horiz_move = this.tick_no;
-                state.waiting_to_move = false;
-            }
 
             const rotate_left = !! (commands & GameCommand.PieceRotateL);
             const rotate_right = !! (commands & GameCommand.PieceRotateR);
@@ -152,13 +126,57 @@ class InGameState {
                 const box = potential_shape.collisionBox();
                 
                 const hits_block = this.hitsBlock (
-                    box, piece.row, piece.col, shape.width, shape.height)
+                    box, piece.row, piece.col, 
+                    potential_shape.width, 
+                    potential_shape.height
+                );
+
+                const hits_wall = this.hitsWall (
+                    shape.pattern, 
+                    piece.col, 
+                    potential_shape.width
+                );
+
+                const hits_floor = this.hitsFloor (
+                    potential_shape.pattern, 
+                    piece.row, 
+                    potential_shape.height
+                );
                 
-                if (!hits_block) {
+                if (!hits_block && !hits_wall && !hits_floor) {
                     piece.state.rotation = which_rotation;
                 }
 
                 state.already_rotated = true;
+            }
+
+            state.waiting_to_move ||= !! (commands & GameCommand.MoveLeft);
+            state.waiting_to_move ||= !! (commands & GameCommand.MoveRight);
+            const time_since_last_horiz_move = this.tick_no - state.last_horiz_move;
+            
+            const box = shape.collisionBox ();
+
+            // handle horizontal moves
+            if (state.waiting_to_move && 
+               (time_since_last_horiz_move >= HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)
+            ) {
+                const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
+                const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
+                const move_vec = move_left + move_right;
+                const potential_col = state.active_piece.col + move_vec;
+
+
+                const hits_wall = this.hitsWall (
+                    shape.pattern, potential_col, shape.width);
+                const hits_field = this.hitsBlock (
+                    box, piece.row, potential_col, shape.width, shape.height);
+
+                if (!hits_wall && !hits_field) {
+                    piece.col = potential_col;
+                }
+
+                state.last_horiz_move = this.tick_no;
+                state.waiting_to_move = false;
             }
 
 
@@ -195,7 +213,8 @@ class InGameState {
                     }
                 } }
 
-                this.state = new GameState_AfterShock (this.tick_no, AFTERSHOCK_TICKS);
+                this.state = new GameState_AfterShock (
+                    this.tick_no, AFTERSHOCK_TICKS);
             }
             else {
                 piece.row++;
@@ -253,20 +272,23 @@ class PieceState {
     shape: number;
     rotation: number;
     color: number;
-
-    width: number;
-    height: number;
     
-    get pattern (): number {
+    get pattern(): number {
         return PIECE_SHAPES[this.shape][this.rotation];
+    }
+
+    get width(): number {
+        return piece_width (this.pattern);
+    }
+
+    get height(): number {
+        return piece_height (this.pattern);
     }
 
     constructor (shape: number, rotation: number, color: number) {
         this.shape = shape;
         this.rotation = rotation;
         this.color = color;
-        this.width = piece_width (this.pattern);
-        this.height = piece_height (this.pattern);
     }
 
     static random(): PieceState {
