@@ -417,7 +417,7 @@ const PIECE_SHAPES: number[][] = [
     // L blocks 
     [
         0x88C0,
-        0x4E00,
+        0x2E00,
         0xC440,
         0xE800,
     ],
@@ -425,9 +425,9 @@ const PIECE_SHAPES: number[][] = [
     // J blocks
     [
         0x44C0,
-        0x8E00,
-        0xC880,
         0xE200,
+        0xC880,
+        0x8E00,
     ],
 
     // S blocks
