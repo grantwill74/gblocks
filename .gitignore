@@ -1,0 +1,7 @@
+src/*
+node_modules/*
+package-lock.json
+package.json
+README.md
+tsconfig.json
+LICENSE
