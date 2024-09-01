@@ -11,7 +11,7 @@ const PALETTE: number[] = [
 
     // fringe colors
     0.25, 0.25, 0.25,   // gray
-    0.3, 0.2, 0.15,     // bottom (scratch that)
+    0.9, 0.9, 0.9,     // white
 ];
 
 const FRINGE_COLOR = 9;

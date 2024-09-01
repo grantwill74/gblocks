@@ -1,17 +1,23 @@
 const GUTTER_ROWS = 4;
 const FIELD_ROWS = 16;
 const FIELD_COLS = 10;
-const LINECLEAR_DELAY_MS = 1000;
 const PREVIEW_PIECES = 3;
 const N_PREVIEWS = 1;
 const TICKS_PER_SEC = 60;
 const SECS_PER_TICK = 1 / TICKS_PER_SEC;
 const N_COLORS = 8; // 1 thru 8
-const AFTERSHOCK_TICKS = Math.ceil (TICKS_PER_SEC * 0.75);
+const AFTERSHOCK_TICKS = Math.ceil (TICKS_PER_SEC * 0.25);
+const CLEARLINE_TICKS = Math.ceil (TICKS_PER_SEC * 1.0);
 const FAST_FALL_SPEED_MULT = 16;
 const HORIZ_MOVE_SPEED_BLOCKS_PER_SEC = 12;
 const HORIZ_MOVE_SPEED_TICKS_PER_BLOCK = 
     1 / HORIZ_MOVE_SPEED_BLOCKS_PER_SEC / SECS_PER_TICK;
+
+const LINECLEAR_N_FLASHES = 4;
+const LINECLEAR_TICKS_PER_FLASH = CLEARLINE_TICKS / LINECLEAR_N_FLASHES;
+const LINECLEAR_TICKS_PER_FLASH_PHASE = LINECLEAR_TICKS_PER_FLASH / 2;
+const LINECLEAR_LO_COLOR = 10;
+const LINECLEAR_HI_COLOR = 1;
 
 /// color pallette index
 type ColorPal = number;
@@ -90,7 +96,31 @@ class InGameState {
             const state = this.state;
 
             // transition back to piece fall
-            if (this.tick_no >= state.start_tick) {
+            if (this.tick_no >= state.end_tick) {
+                const piece = this.nextPiece();
+                const active = InGameState.createActivePieceState (piece);
+                this.state = new GameState_Running (active, this.tick_no);
+            }
+        }
+        else if (this.state instanceof GameState_Clearing) {
+            const state = this.state;
+            const done = this.tick_no >= state.end_tick;
+
+            const tick_in_flash = this.tick_no % LINECLEAR_TICKS_PER_FLASH;
+            const color = 
+                tick_in_flash <  LINECLEAR_TICKS_PER_FLASH_PHASE ?
+                LINECLEAR_LO_COLOR :
+                LINECLEAR_HI_COLOR;
+                
+            for (let line of state.lines) {
+                for (let col = 0; col < FIELD_COLS; col++) {
+                    this.field [line * FIELD_COLS + col] = color;
+                }
+            }
+
+            if (done) {
+                this.shiftLines (state.lines);
+
                 const piece = this.nextPiece();
                 const active = InGameState.createActivePieceState (piece);
                 this.state = new GameState_Running (active, this.tick_no);
@@ -213,13 +243,64 @@ class InGameState {
                     }
                 } }
 
-                this.state = new GameState_AfterShock (
-                    this.tick_no, AFTERSHOCK_TICKS);
+                const cleared = this.linesClear (piece.row);
+
+                if (cleared.length > 0) {
+                    this.state = new GameState_Clearing (
+                        this.tick_no, this.tick_no + CLEARLINE_TICKS, cleared);
+                }
+                else {
+                    this.state = new GameState_AfterShock (
+                        this.tick_no, this.tick_no + AFTERSHOCK_TICKS);
+                }
             }
             else {
                 piece.row++;
             }
         }
+    }
+
+    shiftLines (cleared: number[]): void {
+        const skip = new Set(cleared);
+        let row_offset = 0;
+
+        for (let row of skip) {
+            this.field.fill (0, row * FIELD_COLS, (row + 1) * FIELD_COLS);
+        }
+        
+        for (let row = FIELD_ROWS - 1; row >= 0; row--) {
+            if (skip.has (row)) {
+                row_offset++;
+                continue;
+            }
+
+            for (let col = 0; col < FIELD_COLS; col++) {
+                this.field [(row + row_offset) * FIELD_COLS + col] =
+                    this.field [row * FIELD_COLS + col];
+            }
+        }
+    }
+
+    linesClear (start_row: number): number[] {
+        let lines = [];
+        const end_row = Math.min (start_row + 4, FIELD_ROWS);
+
+        for (let row = start_row; row < end_row; row++) {
+            let row_full = true;
+
+            for (let col = 0; col < FIELD_COLS; col++) {
+                if (!this.field[row * FIELD_COLS + col]) {
+                    row_full = false;
+                    break;
+                }
+            }
+
+            if (row_full) {
+                lines.push (row);
+            }
+        }
+
+        return lines;
     }
 
 
@@ -348,6 +429,7 @@ enum GameState {
     Paused = 0,
     Running,
     AfterShock,
+    Clearing,
     WaitingForPiece,
 }
 
@@ -357,6 +439,18 @@ class GameState_Paused {
 
     constructor (prev: GameState_Running) {
         this.prev_state = prev;
+    }
+}
+class GameState_Clearing {
+    tag: GameState = GameState.Clearing;
+    start_tick: number;
+    end_tick: number;
+    lines: number[];
+
+    constructor (start: number, end: number, lines: number[]) {
+        this.start_tick = start;
+        this.end_tick = end;
+        this.lines = lines;
     }
 }
 class GameState_AfterShock {
