@@ -4,6 +4,15 @@
   <head>
     <meta charset="utf-8">
     <title>G-Blocks</title>
+
+    <style>
+      #btn_play {
+        width: 300px;
+        height: 100px;
+        font-size: xx-large;
+      }
+    </style>
+
     <script src="js/common.js"></script>
     <script src="js/error.js"></script>
     <script src="js/controls.js"></script>
@@ -13,20 +22,44 @@
     <script src="js/renderer.js"></script>
     <script src="js/game.js"></script>
     <script src="js/gblocks.js"></script>
+
+    <script>
+      document.addEventListener ('DOMContentLoaded', function (event) {
+        let btn = document.getElementById ('btn_play');
+
+        if (!btn) {
+          const err = "unable to button with id btn_play.";
+          console.error (err);
+          alert (err);
+          return;
+        }
+
+        btn.disabled = false;
+        btn.textContent = "Play GBlocks!"
+      });
+
+      function onPlay() {
+        let btn = document.getElementById ('btn_play');
+
+        btn.remove ();
+
+        run ();
+      }
+    </script>
   </head>
   <body>
     
-
+    <button id="btn_play" disabled="true" type="button" onclick="onPlay()">Page loading, please wait...</button>
+    <br>
     <canvas width="800" height="600"></canvas>
     <br><br>
-    <script type="module">
-      run();
-    </script>
 
     <br>
-    <!-- <button type="button" onclick="createAndPlaySound()">Noise</button> -->
 
     this app comes from: <a href="https://github.com/grantwill74/gblocks">my github</a> (https://github.com/grantwill74/gblocks) <br>
     license: MIT (see github for license info) <br>
+
+
+    <button type="button" onclick="soundTest()">Sound Test</button>
   </body>
 </html>

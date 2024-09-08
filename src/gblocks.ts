@@ -37,6 +37,7 @@ let renderer: InGameRenderer;
 
 async function run(): Promise<void> {
     try {
+        const sound_prom = SoundSys.create();
         const canvas = getCanvasOrThrow();
         const gl = getWebgl2ContextOrThrow (canvas);
 
@@ -66,9 +67,15 @@ async function run(): Promise<void> {
             field_x_ndc, field_y_ndc
         )
         const keys = new Keyboard ();
+        const sound = await sound_prom;
 
         function tick (_now: number) {
             setTimeout (tick, SECS_PER_TICK * 1000);
+
+            if (game.events & GameEvent.PieceCollision) {
+                sound.crash ();
+            }
+
             let commands = 0;
 
             if (keys.isKeyDown ('ArrowDown')) {
