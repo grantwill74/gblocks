@@ -21,16 +21,19 @@ async function genWhiteNoise(context: AudioContext, duration: number):
     );
     
     const bufData = buffer.getChannelData (0);
-    for (let i = 8; i < bufData.length; i += 8) {
-        let r = Math.random() * 2 - 1;
-        bufData[i - 7] = r;
-        bufData[i - 6] = r;
-        bufData[i - 5] = r;
-        bufData[i - 4] = r;
-        bufData[i - 3] = r;
-        bufData[i - 2] = r;
-        bufData[i - 1] = r;
-        bufData[i] = r;
+    for (let i = 0; i < bufData.length; i++) {
+        if ( (i & 0x7) == 0) {
+            let r = Math.random() * 2 - 1;
+            bufData[i] = r;
+        }
+        else {
+            bufData[i] = bufData[i & 0xFFFFFFF8];
+        }
+    }
+
+    return buffer;
+}
+
     }
 
     return buffer;
