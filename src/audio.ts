@@ -122,53 +122,24 @@ class SoundSys {
         const crash_source = this.context.createBufferSource ();
         crash_source.buffer = this.crash_buf;
         crash_source.loop = true;
-        crash_source.playbackRate.value = 0.1;
+        crash_source.playbackRate.value = 0.5;
 
-        const hi_pass = this.context.createBiquadFilter ();
-        hi_pass.type = 'highpass';
-        hi_pass.Q.value = 2;
-        hi_pass.frequency.value = 444;
-
-        crash_source.connect (hi_pass);
-        hi_pass.connect (this.crash_inst.node);
-        // crash_source.connect (this.crash_inst.node);
+        crash_source.connect (this.crash_inst.node);
 
         crash_source.start (this.context.currentTime);
-        const off_time = 0.04;
-        this.crash_inst.noteOn (this.context.currentTime);
+        const off_time = 0.0;
         this.crash_inst.noteOff (this.context.currentTime + off_time);
         crash_source.stop (this.context.currentTime + 
             off_time + this.crash_inst.releaseTime);
     }
+
+    clear1 (): void {
+        
+    }
 }
 
 async function soundTest(): Promise <void> {
-    const audio = createAudioContext();
-    const source = audio.createBufferSource();
-    const noiseBuf = await genWhiteNoise(audio, 1);
-    source.buffer = noiseBuf;
-    source.loop = true;
+    const sys = await SoundSys.create ();
 
-    const master_gain = audio.createGain();
-    master_gain.gain.value = 0.25;
-
-    const fwoosh_envelope = new AdsrEnvelope (audio, 2, 1, 1, 0.125, 1);
-    const bang_envelope = new AdsrEnvelope (audio, 0, 1, 0, 1, 0.2);
-
-
-    const lo_pass = audio.createBiquadFilter();
-    lo_pass.type = 'lowpass';
-    lo_pass.frequency.value = 9999;
-    lo_pass.Q.value = 10;
-
-    source.connect (bang_envelope.node);
-    bang_envelope.node.connect (lo_pass);
-    lo_pass.connect (master_gain);
-    master_gain.connect (audio.destination);
-
-    source.playbackRate.setValueAtTime (.1, audio.currentTime);
-
-    source.start (audio.currentTime);
-    bang_envelope.noteOn (audio.currentTime);
-    bang_envelope.noteOff (audio.currentTime + .037);
+    sys.crash ();
 }
