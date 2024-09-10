@@ -79,6 +79,7 @@ class AdsrEnvelope {
 
         g.cancelScheduledValues (time);
 
+        g.setValueAtTime (this.sustainLevel, time);
         g.linearRampToValueAtTime (0, time + this.releaseTime);
     }
 }
