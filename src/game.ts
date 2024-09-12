@@ -231,8 +231,6 @@ class InGameState {
                 box, potential_row, piece.col, shape.width, shape.height)
 
             if (hits_floor || hits_block) {
-                this.events |= GameEvent.PieceCollision;
-
                 // copy the blocks over
                 for (let r = 0; r < 4; r++) {
                 for (let c = 0; c < 4; c++) {
@@ -246,10 +244,12 @@ class InGameState {
                 const cleared = this.linesClear (piece.row);
 
                 if (cleared.length > 0) {
+                    this.events |= GameEvent.LineClear;
                     this.state = new GameState_Clearing (
                         this.tick_no, this.tick_no + CLEARLINE_TICKS, cleared);
                 }
                 else {
+                    this.events |= GameEvent.PieceCollision;
                     this.state = new GameState_AfterShock (
                         this.tick_no, this.tick_no + AFTERSHOCK_TICKS);
                 }

@@ -75,6 +75,9 @@ async function run(): Promise<void> {
             if (game.events & GameEvent.PieceCollision) {
                 sound.crash ();
             }
+            if (game.events & GameEvent.LineClear) {
+                sound.clear1 ();
+            }
 
             let commands = 0;
 
