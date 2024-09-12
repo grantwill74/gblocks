@@ -108,6 +108,8 @@ class AdsrEnvelope {
         this.decayTime = decayTime;
         this.sustainLevel = sustainLevel;
         this.releaseTime = releaseTime;
+
+        this.node.gain.value = 0;
     }
 
     noteOn (time: number) {
@@ -136,27 +138,33 @@ class SoundSys {
     context: AudioContext;
 
     crash_buf: AudioBuffer;
-    pulse_buf_50_c4: AudioBuffer;
+    pulse_buf_50: AudioBuffer;
 
-    crash_inst: AdsrEnvelope;
-    doo_inst: AdsrEnvelope;
+    crash_adsr: AdsrEnvelope;
+    doo_adsr: AdsrEnvelope;
+
+    crash_source: AudioBufferSourceNode;
+    clear_source: AudioBufferSourceNode;
 
     master_gain: GainNode;
 
     private constructor (
         context: AudioContext, 
         crash_buf: AudioBuffer,
-        pulse_buf_50_c4: AudioBuffer
+        pulse_buf_50: AudioBuffer
     ) {
         this.context = context;
 
         this.crash_buf = crash_buf;
-        this.pulse_buf_50_c4 = pulse_buf_50_c4;
+        this.pulse_buf_50 = pulse_buf_50;
 
-        this.crash_inst = new AdsrEnvelope (context, 0, 1, 0, 1, 0.15);
-        this.doo_inst = new AdsrEnvelope (context, 0, 1, 0.5, 0.5, 0.1);
+        this.crash_adsr = new AdsrEnvelope (context, 0, 1, 0, 1, 0.15);
+        this.doo_adsr = new AdsrEnvelope (context, 0, 1, 0.5, 0.5, 1);
 
         this.master_gain = context.createGain();
+
+        this.crash_source = context.createBufferSource ();
+        this.clear_source = context.createBufferSource ();
     }
 
     static async create (): Promise <SoundSys> {
@@ -171,36 +179,35 @@ class SoundSys {
             await pulse_buf_prom
         );
 
+        sys.crash_source.buffer = sys.crash_buf;
+        sys.clear_source.buffer = sys.pulse_buf_50;
+
         sys.master_gain.gain.value = 0.25;
 
-        sys.crash_inst.node.connect (sys.master_gain);
+        sys.crash_source.connect (sys.crash_adsr.node);
+        sys.clear_source.connect (sys.doo_adsr.node);
+
+        sys.crash_adsr.node.connect (sys.master_gain);
+        sys.doo_adsr.node.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
+
+        sys.crash_source.start ();
+        sys.clear_source.start ();
 
         return sys;
     }
 
     crash (): void {
-        const crash_source = this.context.createBufferSource ();
-        crash_source.buffer = this.crash_buf;
-        crash_source.loop = true;
-        crash_source.playbackRate.value = 0.5;
-
-        crash_source.connect (this.crash_inst.node);
-
-        crash_source.start (this.context.currentTime);
-        const off_time = 0.0;
-        this.crash_inst.noteOff (this.context.currentTime + off_time);
-        crash_source.stop (this.context.currentTime + 
-            off_time + this.crash_inst.releaseTime);
+        this.crash_adsr.noteOff (this.context.currentTime);
     }
 
     clear1 (): void {
-        const clear_source = this.context.createBufferSource ();
+        this.doo_adsr.noteOff (this.context.currentTime);
     }
 }
 
 async function soundTest(): Promise <void> {
     const sys = await SoundSys.create ();
 
-    sys.crash ();
+    sys.clear1 ();
 }
