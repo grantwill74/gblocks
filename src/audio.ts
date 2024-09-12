@@ -109,7 +109,7 @@ class AdsrEnvelope {
         this.sustainLevel = sustainLevel;
         this.releaseTime = releaseTime;
 
-        this.node.gain.value = 0;
+        this.node.gain.setValueAtTime (0, 0);
     }
 
     noteOn (time: number) {
@@ -190,6 +190,9 @@ class SoundSys {
         sys.adsr_noise.node.connect (sys.master_gain);
         sys.adsr_pulse1.node.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
+
+        sys.chn_noise.loop = true;
+        sys.chn_pulse1.loop = true;
 
         sys.chn_noise.start ();
         sys.chn_pulse1.start ();
