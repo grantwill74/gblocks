@@ -140,11 +140,11 @@ class SoundSys {
     crash_buf: AudioBuffer;
     pulse_buf_50: AudioBuffer;
 
-    crash_adsr: AdsrEnvelope;
-    doo_adsr: AdsrEnvelope;
+    adsr_noise: AdsrEnvelope;
+    adsr_pulse1: AdsrEnvelope;
 
-    crash_source: AudioBufferSourceNode;
-    clear_source: AudioBufferSourceNode;
+    chn_noise: AudioBufferSourceNode;
+    chn_pulse1: AudioBufferSourceNode;
 
     master_gain: GainNode;
 
@@ -158,13 +158,13 @@ class SoundSys {
         this.crash_buf = crash_buf;
         this.pulse_buf_50 = pulse_buf_50;
 
-        this.crash_adsr = new AdsrEnvelope (context, 0, 1, 0, 1, 0.15);
-        this.doo_adsr = new AdsrEnvelope (context, 0, 1, 0.5, 0.5, 1);
+        this.adsr_noise = new AdsrEnvelope (context, 0, 1, 0, 1, 0.15);
+        this.adsr_pulse1 = new AdsrEnvelope (context, 0, 1, 0.5, 0.5, 1);
 
         this.master_gain = context.createGain();
 
-        this.crash_source = context.createBufferSource ();
-        this.clear_source = context.createBufferSource ();
+        this.chn_noise = context.createBufferSource ();
+        this.chn_pulse1 = context.createBufferSource ();
     }
 
     static async create (): Promise <SoundSys> {
@@ -179,30 +179,30 @@ class SoundSys {
             await pulse_buf_prom
         );
 
-        sys.crash_source.buffer = sys.crash_buf;
-        sys.clear_source.buffer = sys.pulse_buf_50;
+        sys.chn_noise.buffer = sys.crash_buf;
+        sys.chn_pulse1.buffer = sys.pulse_buf_50;
 
         sys.master_gain.gain.value = 0.25;
 
-        sys.crash_source.connect (sys.crash_adsr.node);
-        sys.clear_source.connect (sys.doo_adsr.node);
+        sys.chn_noise.connect (sys.adsr_noise.node);
+        sys.chn_pulse1.connect (sys.adsr_pulse1.node);
 
-        sys.crash_adsr.node.connect (sys.master_gain);
-        sys.doo_adsr.node.connect (sys.master_gain);
+        sys.adsr_noise.node.connect (sys.master_gain);
+        sys.adsr_pulse1.node.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
 
-        sys.crash_source.start ();
-        sys.clear_source.start ();
+        sys.chn_noise.start ();
+        sys.chn_pulse1.start ();
 
         return sys;
     }
 
     crash (): void {
-        this.crash_adsr.noteOff (this.context.currentTime);
+        this.adsr_noise.noteOff (this.context.currentTime);
     }
 
     clear1 (): void {
-        this.doo_adsr.noteOff (this.context.currentTime);
+        this.adsr_pulse1.noteOff (this.context.currentTime);
     }
 }
 
