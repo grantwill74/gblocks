@@ -85,8 +85,6 @@ async function genPulseWave (
 }
 
 class AdsrEnvelope {
-    node: GainNode;
-
     attackTime: number;
     attackLevel: number;
     decayTime: number;
@@ -94,34 +92,60 @@ class AdsrEnvelope {
     releaseTime: number;
 
     constructor (
-        context: AudioContext,
         attackTime: number,
         attackLevel: number,
         decayTime: number,
         sustainLevel: number,
         releaseTime: number,
     ) {
-        this.node = context.createGain();
-
         this.attackTime = attackTime;
         this.attackLevel = attackLevel;
         this.decayTime = decayTime;
         this.sustainLevel = sustainLevel;
         this.releaseTime = releaseTime;
+    }
+
+    static default: AdsrEnvelope = new AdsrEnvelope (0, 1, 0, 1, 0);
+    static crash: AdsrEnvelope = new AdsrEnvelope (0, 1, 0, 1, 0.15);
+    static clear: AdsrEnvelope = new AdsrEnvelope (0, 1, 0.5, 0.5, 1);
+    static beep: AdsrEnvelope = new AdsrEnvelope (0, 1, 0, 0.25, 0.1);
+}
+
+class AudioChannel {
+    node: GainNode;
+    envelope: AdsrEnvelope;
+
+    constructor (context: AudioContext) {
+        this.node = context.createGain();
+
+        this.envelope = AdsrEnvelope.default;
 
         this.node.gain.setValueAtTime (0, 0);
+    }
+
+    setEnvelope (env: AdsrEnvelope) {
+        this.envelope = env;
     }
 
     noteOn (time: number) {
         const g = this.node.gain;
 
-        const sustain_time = this.attackTime + this.decayTime;
+        const sustain_time = 
+            this.envelope.attackTime + 
+            this.envelope.decayTime;
 
         g.cancelScheduledValues (time);
 
         g.setValueAtTime (0, time);
-        g.linearRampToValueAtTime (this.attackLevel, time + this.attackTime);
-        g.linearRampToValueAtTime (this.sustainLevel, time + sustain_time);
+        g.linearRampToValueAtTime (
+            this.envelope.attackLevel, 
+            time + this.envelope.attackTime
+        );
+
+        g.linearRampToValueAtTime (
+            this.envelope.sustainLevel, 
+            time + sustain_time
+        );
     }
 
     noteOff (time: number) {
@@ -129,8 +153,8 @@ class AdsrEnvelope {
 
         g.cancelScheduledValues (time);
 
-        g.setValueAtTime (this.sustainLevel, time);
-        g.linearRampToValueAtTime (0, time + this.releaseTime);
+        g.setValueAtTime (this.envelope.sustainLevel, time);
+        g.linearRampToValueAtTime (0, time + this.envelope.releaseTime);
     }
 }
 
@@ -140,11 +164,11 @@ class SoundSys {
     crash_buf: AudioBuffer;
     pulse_buf_50: AudioBuffer;
 
-    adsr_noise: AdsrEnvelope;
-    adsr_pulse1: AdsrEnvelope;
+    chn_noise: AudioChannel;
+    chn_pulse1: AudioChannel;
 
-    chn_noise: AudioBufferSourceNode;
-    chn_pulse1: AudioBufferSourceNode;
+    src_noise: AudioBufferSourceNode;
+    src_pulse1: AudioBufferSourceNode;
 
     master_gain: GainNode;
 
@@ -158,13 +182,13 @@ class SoundSys {
         this.crash_buf = crash_buf;
         this.pulse_buf_50 = pulse_buf_50;
 
-        this.adsr_noise = new AdsrEnvelope (context, 0, 1, 0, 1, 0.15);
-        this.adsr_pulse1 = new AdsrEnvelope (context, 0, 1, 0.5, 0.5, 1);
+        this.chn_noise = new AudioChannel (context);
+        this.chn_pulse1 = new AudioChannel (context);
 
         this.master_gain = context.createGain();
 
-        this.chn_noise = context.createBufferSource ();
-        this.chn_pulse1 = context.createBufferSource ();
+        this.src_noise = context.createBufferSource ();
+        this.src_pulse1 = context.createBufferSource ();
     }
 
     static async create (): Promise <SoundSys> {
@@ -179,33 +203,42 @@ class SoundSys {
             await pulse_buf_prom
         );
 
-        sys.chn_noise.buffer = sys.crash_buf;
-        sys.chn_pulse1.buffer = sys.pulse_buf_50;
+        sys.src_noise.buffer = sys.crash_buf;
+        sys.src_pulse1.buffer = sys.pulse_buf_50;
 
         sys.master_gain.gain.value = 0.25;
 
-        sys.chn_noise.connect (sys.adsr_noise.node);
-        sys.chn_pulse1.connect (sys.adsr_pulse1.node);
+        sys.src_noise.connect (sys.chn_noise.node);
+        sys.src_pulse1.connect (sys.chn_pulse1.node);
 
-        sys.adsr_noise.node.connect (sys.master_gain);
-        sys.adsr_pulse1.node.connect (sys.master_gain);
+        sys.chn_noise.node.connect (sys.master_gain);
+        sys.chn_pulse1.node.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
 
-        sys.chn_noise.loop = true;
-        sys.chn_pulse1.loop = true;
+        sys.src_noise.loop = true;
+        sys.src_pulse1.loop = true;
 
-        sys.chn_noise.start ();
-        sys.chn_pulse1.start ();
+        sys.src_noise.start ();
+        sys.src_pulse1.start ();
 
         return sys;
     }
 
     crash (): void {
-        this.adsr_noise.noteOff (this.context.currentTime);
+        this.chn_noise.setEnvelope (AdsrEnvelope.crash);
+        this.src_noise.playbackRate.setValueAtTime (0.5, 0);
+        this.chn_noise.noteOff (this.context.currentTime);
     }
 
     clear1 (): void {
-        this.adsr_pulse1.noteOff (this.context.currentTime);
+        this.chn_pulse1.setEnvelope (AdsrEnvelope.clear);
+        this.chn_pulse1.noteOff (this.context.currentTime);
+    }
+
+    moveBeep (): void {
+        this.chn_pulse1.setEnvelope (AdsrEnvelope.beep);
+        this.src_pulse1.playbackRate.setValueAtTime (2.0, 0);
+        this.chn_pulse1.noteOff (this.context.currentTime);
     }
 }
 
