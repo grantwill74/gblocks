@@ -186,15 +186,15 @@ class InGameState {
             
             const box = shape.collisionBox ();
 
+            const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
+            const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
+            const move_vec = move_left + move_right;
+
             // handle horizontal moves
-            if (state.waiting_to_move && 
+            if (state.waiting_to_move && move_vec != 0 &&
                (time_since_last_horiz_move >= HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)
             ) {
-                const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
-                const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
-                const move_vec = move_left + move_right;
                 const potential_col = state.active_piece.col + move_vec;
-
 
                 const hits_wall = this.hitsWall (
                     shape.pattern, potential_col, shape.width);
@@ -203,6 +203,7 @@ class InGameState {
 
                 if (!hits_wall && !hits_field) {
                     piece.col = potential_col;
+                    this.events |= GameEvent.PieceMove;
                 }
 
                 state.last_horiz_move = this.tick_no;
@@ -418,11 +419,12 @@ enum GameCommand {
 
 enum GameEvent {
     None = 0,
-    PieceFall = 1,
-    PieceCollision = 2,
-    PieceRotation = 4,
-    LineClear = 8,
-    NextPiece = 0x10,
+    PieceMove = 1,
+    PieceFall = 2,
+    PieceCollision = 4,
+    PieceRotation = 8,
+    LineClear = 0x10,
+    NextPiece = 0x20,
 }
 
 enum GameState {
