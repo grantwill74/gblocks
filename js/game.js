@@ -126,17 +126,18 @@ class InGameState {
             state.waiting_to_move || (state.waiting_to_move = !!(commands & GameCommand.MoveRight));
             const time_since_last_horiz_move = this.tick_no - state.last_horiz_move;
             const box = shape.collisionBox();
+            const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
+            const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
+            const move_vec = move_left + move_right;
             // handle horizontal moves
-            if (state.waiting_to_move &&
+            if (state.waiting_to_move && move_vec != 0 &&
                 (time_since_last_horiz_move >= HORIZ_MOVE_SPEED_TICKS_PER_BLOCK)) {
-                const move_left = (commands & GameCommand.MoveLeft) ? -1 : 0;
-                const move_right = (commands & GameCommand.MoveRight) ? 1 : 0;
-                const move_vec = move_left + move_right;
                 const potential_col = state.active_piece.col + move_vec;
                 const hits_wall = this.hitsWall(shape.pattern, potential_col, shape.width);
                 const hits_field = this.hitsBlock(box, piece.row, potential_col, shape.width, shape.height);
                 if (!hits_wall && !hits_field) {
                     piece.col = potential_col;
+                    this.events |= GameEvent.PieceMove;
                 }
                 state.last_horiz_move = this.tick_no;
                 state.waiting_to_move = false;
@@ -155,7 +156,6 @@ class InGameState {
             const hits_floor = this.hitsFloor(shape.pattern, potential_row, shape.height);
             const hits_block = this.hitsBlock(box, potential_row, piece.col, shape.width, shape.height);
             if (hits_floor || hits_block) {
-                this.events |= GameEvent.PieceCollision;
                 // copy the blocks over
                 for (let r = 0; r < 4; r++) {
                     for (let c = 0; c < 4; c++) {
@@ -167,9 +167,11 @@ class InGameState {
                 }
                 const cleared = this.linesClear(piece.row);
                 if (cleared.length > 0) {
+                    this.events |= GameEvent.LineClear;
                     this.state = new GameState_Clearing(this.tick_no, this.tick_no + CLEARLINE_TICKS, cleared);
                 }
                 else {
+                    this.events |= GameEvent.PieceCollision;
                     this.state = new GameState_AfterShock(this.tick_no, this.tick_no + AFTERSHOCK_TICKS);
                 }
             }
@@ -298,11 +300,12 @@ var GameCommand;
 var GameEvent;
 (function (GameEvent) {
     GameEvent[GameEvent["None"] = 0] = "None";
-    GameEvent[GameEvent["PieceFall"] = 1] = "PieceFall";
-    GameEvent[GameEvent["PieceCollision"] = 2] = "PieceCollision";
-    GameEvent[GameEvent["PieceRotation"] = 4] = "PieceRotation";
-    GameEvent[GameEvent["LineClear"] = 8] = "LineClear";
-    GameEvent[GameEvent["NextPiece"] = 16] = "NextPiece";
+    GameEvent[GameEvent["PieceMove"] = 1] = "PieceMove";
+    GameEvent[GameEvent["PieceFall"] = 2] = "PieceFall";
+    GameEvent[GameEvent["PieceCollision"] = 4] = "PieceCollision";
+    GameEvent[GameEvent["PieceRotation"] = 8] = "PieceRotation";
+    GameEvent[GameEvent["LineClear"] = 16] = "LineClear";
+    GameEvent[GameEvent["NextPiece"] = 32] = "NextPiece";
 })(GameEvent || (GameEvent = {}));
 var GameState;
 (function (GameState) {
@@ -351,14 +354,14 @@ class GameState_Running {
 const PIECE_SHAPES = [
     // I blocks
     [
-        0x8888, // vertical
+        0x8888,
         0xF000, // horizontal
     ],
     // T blocks
     [
-        0xE400, // point down (actual T)
-        0x8C80, // point right
-        0x4E00, // point up
+        0xE400,
+        0x8C80,
+        0x4E00,
         0x4C40, // point left
     ],
     // the one O block

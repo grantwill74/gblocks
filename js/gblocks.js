@@ -35,6 +35,7 @@ let renderer;
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            const sound_prom = SoundSys.create();
             const canvas = getCanvasOrThrow();
             const gl = getWebgl2ContextOrThrow(canvas);
             SCREEN_W = canvas.width;
@@ -53,8 +54,18 @@ function run() {
             const game = new InGameState();
             const renderer = new InGameRenderer(gl, FIELD_ROWS, FIELD_COLS, field_x_ndc, field_y_ndc);
             const keys = new Keyboard();
+            const sound = yield sound_prom;
             function tick(_now) {
                 setTimeout(tick, SECS_PER_TICK * 1000);
+                if (game.events & GameEvent.PieceCollision) {
+                    sound.crash();
+                }
+                if (game.events & GameEvent.LineClear) {
+                    sound.clear1();
+                }
+                if (game.events & GameEvent.PieceMove) {
+                    sound.moveBeep();
+                }
                 let commands = 0;
                 if (keys.isKeyDown('ArrowDown')) {
                     commands |= GameCommand.FastFall;
