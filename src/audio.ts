@@ -162,8 +162,8 @@ class SoundSys {
     context: AudioContext;
 
     crash_buf: AudioBuffer;
-    pulse_buf_50_c4: AudioBuffer;
-    pulse_buf_25_c4: AudioBuffer;
+    pulse_buf_50_a4: AudioBuffer;
+    pulse_buf_25_a4: AudioBuffer;
 
     chn_noise: AudioChannel;
     chn_pulse1: AudioChannel;
@@ -176,14 +176,14 @@ class SoundSys {
     private constructor (
         context: AudioContext, 
         crash_buf: AudioBuffer,
-        pulse_buf_50_c4: AudioBuffer,
-        pulse_buf_25_c4: AudioBuffer,
+        pulse_buf_50_a4: AudioBuffer,
+        pulse_buf_25_a4: AudioBuffer,
     ) {
         this.context = context;
 
         this.crash_buf = crash_buf;
-        this.pulse_buf_50_c4 = pulse_buf_50_c4;
-        this.pulse_buf_25_c4 = pulse_buf_25_c4;
+        this.pulse_buf_50_a4 = pulse_buf_50_a4;
+        this.pulse_buf_25_a4 = pulse_buf_25_a4;
 
         this.chn_noise = new AudioChannel (context);
         this.chn_pulse1 = new AudioChannel (context);
@@ -198,8 +198,8 @@ class SoundSys {
         const context = createAudioContext();
 
         const crash_buf_prom = genWhiteNoise (context, 4);
-        const pulse_buf_prom = genPulseWave (context, 0.5, 261.6256, 4);
-        const pulse_buf_25_prom = genPulseWave (context, 0.25, 261.6256, 4)
+        const pulse_buf_prom = genPulseWave (context, 0.5, 440, 4);
+        const pulse_buf_25_prom = genPulseWave (context, 0.25, 440, 4)
         
         const sys = new SoundSys (
             context, 
@@ -209,7 +209,7 @@ class SoundSys {
         );
 
         sys.src_noise.buffer = sys.crash_buf;
-        sys.src_pulse1.buffer = sys.pulse_buf_50_c4;
+        sys.src_pulse1.buffer = sys.pulse_buf_50_a4;
 
         sys.master_gain.gain.value = 0.25;
 
