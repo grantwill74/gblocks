@@ -158,6 +158,11 @@ class AudioChannel {
     }
 }
 
+enum ChannelId {
+    Noise = 0,
+    Pulse1 = 1,
+}
+
 class SoundSys {
     context: AudioContext;
 
@@ -165,8 +170,7 @@ class SoundSys {
     pulse_buf_50_a4: AudioBuffer;
     pulse_buf_25_a4: AudioBuffer;
 
-    chn_noise: AudioChannel;
-    chn_pulse1: AudioChannel;
+    channels: AudioChannel[];
 
     src_noise: AudioBufferSourceNode;
     src_pulse1: AudioBufferSourceNode;
@@ -185,8 +189,9 @@ class SoundSys {
         this.pulse_buf_50_a4 = pulse_buf_50_a4;
         this.pulse_buf_25_a4 = pulse_buf_25_a4;
 
-        this.chn_noise = new AudioChannel (context);
-        this.chn_pulse1 = new AudioChannel (context);
+        this.channels = new Array <AudioChannel> (2);
+        this.channels [ChannelId.Noise] = new AudioChannel (context);
+        this.channels [ChannelId.Pulse1] = new AudioChannel (context);
 
         this.master_gain = context.createGain();
 
@@ -213,11 +218,11 @@ class SoundSys {
 
         sys.master_gain.gain.value = 0.25;
 
-        sys.src_noise.connect (sys.chn_noise.node);
-        sys.src_pulse1.connect (sys.chn_pulse1.node);
+        sys.src_noise.connect (sys.channels [ChannelId.Noise].node);
+        sys.src_pulse1.connect (sys.channels [ChannelId.Pulse1].node);
 
-        sys.chn_noise.node.connect (sys.master_gain);
-        sys.chn_pulse1.node.connect (sys.master_gain);
+        sys.channels [ChannelId.Noise].node.connect (sys.master_gain);
+        sys.channels [ChannelId.Pulse1].node.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
 
         sys.src_noise.loop = true;
@@ -230,20 +235,20 @@ class SoundSys {
     }
 
     crash (): void {
-        this.chn_noise.setEnvelope (AdsrEnvelope.crash);
+        this.channels [ChannelId.Noise].setEnvelope (AdsrEnvelope.crash);
         this.src_noise.playbackRate.setValueAtTime (0.5, 0);
-        this.chn_noise.noteOff (this.context.currentTime);
+        this.channels [ChannelId.Noise].noteOff (this.context.currentTime);
     }
 
     clear1 (): void {
-        this.chn_pulse1.setEnvelope (AdsrEnvelope.clear);
-        this.chn_pulse1.noteOff (this.context.currentTime);
+        this.channels [ChannelId.Pulse1].setEnvelope (AdsrEnvelope.clear);
+        this.channels [ChannelId.Pulse1].noteOff (this.context.currentTime);
     }
 
     moveBeep (): void {
-        this.chn_pulse1.setEnvelope (AdsrEnvelope.beep);
+        this.channels [ChannelId.Pulse1].setEnvelope (AdsrEnvelope.beep);
         this.src_pulse1.playbackRate.setValueAtTime (2.0, 0);
-        this.chn_pulse1.noteOff (this.context.currentTime);
+        this.channels [ChannelId.Pulse1].noteOff (this.context.currentTime);
     }
 }
 
