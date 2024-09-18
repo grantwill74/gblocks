@@ -129,8 +129,13 @@ class AudioChannel {
         this.source.start ();
     }
 
-    setBuffer (buf: AudioBuffer) {
+    setBuffer (context: AudioContext, buf: AudioBuffer) {
+        this.source.stop ();
+        this.source = context.createBufferSource ();
+        this.source.connect (this.gain);
+        this.source.loop = true;
         this.source.buffer = buf;
+        this.source.start ();
     }
 
     setEnvelope (env: AdsrEnvelope) {
@@ -221,9 +226,6 @@ class SoundSys {
             await pulse_buf_25_prom,
         );
 
-        sys.channels [ChannelId.Noise].setBuffer (sys.crash_buf);
-        sys.channels [ChannelId.Pulse1].setBuffer (sys.pulse_buf_50_a4);
-
         sys.master_gain.gain.setValueAtTime (.25, 0);
 
         sys.channels [ChannelId.Noise].gain.connect (sys.master_gain);
@@ -248,18 +250,21 @@ class SoundSys {
     }
 
     crash (): void {
+        this.channels [ChannelId.Noise].setBuffer (this.context, this.crash_buf);
         this.channels [ChannelId.Noise].setEnvelope (AdsrEnvelope.crash);
         this.channels [ChannelId.Noise].setPlaybackRate (0.5);
         this.channels [ChannelId.Noise].noteOff (this.context.currentTime);
     }
 
     clear1 (): void {
+        this.channels [ChannelId.Pulse1].setBuffer (this.context, this.pulse_buf_50_a4);
         this.channels [ChannelId.Pulse1].setEnvelope (AdsrEnvelope.clear);
         this.channels [ChannelId.Pulse1].setPlaybackRate (1);
         this.channels [ChannelId.Pulse1].noteOff (this.context.currentTime);
     }
 
     moveBeep (): void {
+        this.channels [ChannelId.Pulse1].setBuffer (this.context, this.pulse_buf_50_a4);
         this.channels [ChannelId.Pulse1].setEnvelope (AdsrEnvelope.beep);
         this.channels [ChannelId.Pulse1].setPlaybackRate (2);
         this.channels [ChannelId.Pulse1].noteOff (this.context.currentTime);
