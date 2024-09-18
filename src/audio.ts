@@ -112,23 +112,37 @@ class AdsrEnvelope {
 }
 
 class AudioChannel {
-    node: GainNode;
+    gain: GainNode;
     envelope: AdsrEnvelope;
+    source: AudioBufferSourceNode;
 
     constructor (context: AudioContext) {
-        this.node = context.createGain();
+        this.gain = context.createGain ();
 
         this.envelope = AdsrEnvelope.default;
 
-        this.node.gain.setValueAtTime (0, 0);
+        this.gain.gain.setValueAtTime (0, 0);
+
+        this.source = context.createBufferSource ();
+        this.source.connect (this.gain);
+        this.source.loop = true;
+        this.source.start ();
+    }
+
+    setBuffer (buf: AudioBuffer) {
+        this.source.buffer = buf;
     }
 
     setEnvelope (env: AdsrEnvelope) {
         this.envelope = env;
     }
 
+    setPlaybackRate (rate: number) {
+        this.source.playbackRate.setValueAtTime (rate, 0);
+    }
+
     noteOn (time: number) {
-        const g = this.node.gain;
+        const g = this.gain.gain;
 
         const sustain_time = 
             this.envelope.attackTime + 
@@ -149,7 +163,7 @@ class AudioChannel {
     }
 
     noteOff (time: number) {
-        const g = this.node.gain;
+        const g = this.gain.gain;
 
         g.cancelScheduledValues (time);
 
@@ -172,9 +186,6 @@ class SoundSys {
 
     channels: AudioChannel[];
 
-    src_noise: AudioBufferSourceNode;
-    src_pulse1: AudioBufferSourceNode;
-
     master_gain: GainNode;
 
     private constructor (
@@ -194,9 +205,6 @@ class SoundSys {
         this.channels [ChannelId.Pulse1] = new AudioChannel (context);
 
         this.master_gain = context.createGain();
-
-        this.src_noise = context.createBufferSource ();
-        this.src_pulse1 = context.createBufferSource ();
     }
 
     static async create (): Promise <SoundSys> {
@@ -213,41 +221,47 @@ class SoundSys {
             await pulse_buf_25_prom,
         );
 
-        sys.src_noise.buffer = sys.crash_buf;
-        sys.src_pulse1.buffer = sys.pulse_buf_50_a4;
+        sys.channels [ChannelId.Noise].setBuffer (sys.crash_buf);
+        sys.channels [ChannelId.Pulse1].setBuffer (sys.pulse_buf_50_a4);
 
-        sys.master_gain.gain.value = 0.25;
+        sys.master_gain.gain.setValueAtTime (.25, 0);
 
-        sys.src_noise.connect (sys.channels [ChannelId.Noise].node);
-        sys.src_pulse1.connect (sys.channels [ChannelId.Pulse1].node);
-
-        sys.channels [ChannelId.Noise].node.connect (sys.master_gain);
-        sys.channels [ChannelId.Pulse1].node.connect (sys.master_gain);
+        sys.channels [ChannelId.Noise].gain.connect (sys.master_gain);
+        sys.channels [ChannelId.Pulse1].gain.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
-
-        sys.src_noise.loop = true;
-        sys.src_pulse1.loop = true;
-
-        sys.src_noise.start ();
-        sys.src_pulse1.start ();
 
         return sys;
     }
 
+    noteOn (channel: number, note: number): void {
+        // the frequency of midi note 'n' is 
+        // 440 * 2^((n-69)/12)
+        // assuming that 440 is the base frequency (which it is for us)
+        const freq_exp = (note - 69) / 12;
+        
+        // however, we don't need the 440 factor, because we will be
+        // dividing by the base frequency of the channel, which is hardcoded
+        // to 440, to compute the playback speed.
+        const playback_speed = Math.pow (2, freq_exp);
+        
+        this.channels 
+    }
+
     crash (): void {
         this.channels [ChannelId.Noise].setEnvelope (AdsrEnvelope.crash);
-        this.src_noise.playbackRate.setValueAtTime (0.5, 0);
+        this.channels [ChannelId.Noise].setPlaybackRate (0.5);
         this.channels [ChannelId.Noise].noteOff (this.context.currentTime);
     }
 
     clear1 (): void {
         this.channels [ChannelId.Pulse1].setEnvelope (AdsrEnvelope.clear);
+        this.channels [ChannelId.Pulse1].setPlaybackRate (1);
         this.channels [ChannelId.Pulse1].noteOff (this.context.currentTime);
     }
 
     moveBeep (): void {
         this.channels [ChannelId.Pulse1].setEnvelope (AdsrEnvelope.beep);
-        this.src_pulse1.playbackRate.setValueAtTime (2.0, 0);
+        this.channels [ChannelId.Pulse1].setPlaybackRate (2);
         this.channels [ChannelId.Pulse1].noteOff (this.context.currentTime);
     }
 }
