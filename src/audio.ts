@@ -167,7 +167,7 @@ class AudioChannel {
             this.envelope.attackTime + 
             this.envelope.decayTime;
 
-        g.cancelScheduledValues (time);
+        g.cancelScheduledValues (0);
 
         g.setValueAtTime (0, time);
         g.linearRampToValueAtTime (
@@ -184,7 +184,7 @@ class AudioChannel {
     noteOff (time: number) {
         const g = this.gain.gain;
 
-        g.cancelScheduledValues (time);
+        g.cancelScheduledValues (0);
 
         g.setValueAtTime (this.envelope.sustainLevel, time);
         g.linearRampToValueAtTime (0, time + this.envelope.releaseTime);
@@ -406,14 +406,17 @@ class SoundProcess {
 
         if (this.beats >= next.when) {
             this.ip ++;
+            this.played = false;
         }
-        else if (this.played) {
+        
+        if (this.played) {
             return new NoteNop;
         }
 
         // always make sure we finish the current note
         // don't return next until it's the current note
         this.played = true;
+        console.log ('new op: ', top)
         return top.op;
     }
 
