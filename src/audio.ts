@@ -315,15 +315,15 @@ class SoundSys {
 }
 
 enum SoundOpcode {
-    Op_NoteNop = 0,
-    Op_NoteOn,
-    Op_NoteOff,
+    NoteNop = 0,
+    NoteOn,
+    NoteOff,
 }
 
 // sound commands
 class NoteOn { 
     which: number;
-    get opcode (): number { return SoundOpcode.Op_NoteOn}
+    get opcode (): number { return SoundOpcode.NoteOn}
 
     constructor (which: number) {
         this.which = which;
@@ -331,11 +331,11 @@ class NoteOn {
 }
 
 class NoteOff {
-    get opcode (): number { return SoundOpcode.Op_NoteOff}
+    get opcode (): number { return SoundOpcode.NoteOff}
 }
 
 class NoteNop {
-    get opcode (): number { return SoundOpcode.Op_NoteNop}
+    get opcode (): number { return SoundOpcode.NoteNop}
 }
 
 type SoundOp = NoteOn | NoteOff | NoteNop;
