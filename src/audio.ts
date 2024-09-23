@@ -356,9 +356,9 @@ class SoundProcess {
     last_update: number = -1;
     loops: boolean = false;
 
-    constructor (ops: SoundCommand[], bps: number) {
+    constructor (ops: SoundCommand[], bpm: number) {
         this.ops = ops;
-        this.bpm = bps;
+        this.bpm = bpm;
     }
 
     start (time: number): void {
@@ -415,7 +415,7 @@ class SoundProcess {
 class SoundProgBuilder {
     ops: SoundCommand[];
     n_beats: number = 0;
-    _bps: number = 96;
+    _bpm: number = 96;
 
     constructor () {
         this.ops = new Array <SoundCommand> ();
@@ -424,8 +424,8 @@ class SoundProgBuilder {
     n = this.note;
     r = this.rest;
 
-    get bps (): number { return this._bps; }
-    set bps (n: number) { this._bps = n; }
+    get bpm (): number { return this._bpm; }
+    set bpm (n: number) { this._bpm = n; }
 
     /// which note to play and how many beats to play it
     note (which: number, howLong: number) {
