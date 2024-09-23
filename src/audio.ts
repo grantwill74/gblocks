@@ -268,12 +268,14 @@ class SoundSys {
             const op = which_proc.tick (time);
             
             if (op instanceof NoteOn) {
+                console.log ('on')
                 // TODO don't hardcode this in the future
                 this.channels [i].setEnvelope (AdsrEnvelope.beep);
 
                 this.channels [i].noteOn (op.which, time);
             }
             else if (op instanceof NoteOff) {
+                console.log ('off')
                 // TODO don't hardcode this in the future
                 this.channels [i].setEnvelope (AdsrEnvelope.beep);
 
@@ -356,6 +358,10 @@ class SoundProcess {
     last_update: number = -1;
     loops: boolean = false;
 
+    // becomes true when the top note has been returned by 'tick'
+    // so that we don't process a note mulitple times
+    played: boolean = false;
+
     constructor (ops: SoundCommand[], bpm: number) {
         this.ops = ops;
         this.bpm = bpm;
@@ -384,8 +390,6 @@ class SoundProcess {
         this.beats += delta_beats;
         this.last_update = time;
 
-        console.log (delta, delta_beats)
-
         if (this.ip == this.ops.length - 1) {
             if (this.loops) {
                 this.ip = 0;
@@ -394,6 +398,7 @@ class SoundProcess {
                 this.ip ++;
             }
 
+            this.played = true;
             return top.op;
         }
         
@@ -402,9 +407,13 @@ class SoundProcess {
         if (this.beats >= next.when) {
             this.ip ++;
         }
+        else if (this.played) {
+            return new NoteNop;
+        }
 
         // always make sure we finish the current note
         // don't return next until it's the current note
+        this.played = true;
         return top.op;
     }
 
