@@ -1,5 +1,6 @@
 const SAMPLE_RATE: number = 44100;
-
+const AUDIO_TICKS_PER_SEC = 60;
+const AUDIO_SECS_PER_TICK = 1 / AUDIO_TICKS_PER_SEC;
 
 function createAudioContext(): AudioContext {
     const context = new window.AudioContext({
@@ -146,7 +147,20 @@ class AudioChannel {
         this.source.playbackRate.setValueAtTime (rate, 0);
     }
 
-    noteOn (time: number) {
+    noteOn (note: number, time: number) {
+        // the frequency of midi note 'n' is 
+        // 440 * 2^((n-69)/12)
+        // assuming that 440 is the base frequency (which it is for us)
+        const freq_exp = (note - 69) / 12;
+        
+        // however, we don't need the 440 factor, because we will be
+        // dividing by the base frequency of the channel, which is hardcoded
+        // to 440, to compute the playback speed.
+        const playback_speed = Math.pow (2, freq_exp);
+        
+        this.source.playbackRate.cancelScheduledValues (time);
+        this.source.playbackRate.setValueAtTime (playback_speed, time);
+
         const g = this.gain.gain;
 
         const sustain_time = 
@@ -190,6 +204,8 @@ class SoundSys {
     pulse_buf_25_a4: AudioBuffer;
 
     channels: AudioChannel[];
+    music: SoundProcess[];
+    sfx: SoundProcess[];
 
     master_gain: GainNode;
 
@@ -208,6 +224,9 @@ class SoundSys {
         this.channels = new Array <AudioChannel> (2);
         this.channels [ChannelId.Noise] = new AudioChannel (context);
         this.channels [ChannelId.Pulse1] = new AudioChannel (context);
+
+        this.music = this.channels.map ((_) => SoundProcess.Nothing);
+        this.sfx = this.channels.map ((_) => SoundProcess.Nothing);
 
         this.master_gain = context.createGain();
     }
@@ -232,22 +251,44 @@ class SoundSys {
         sys.channels [ChannelId.Pulse1].gain.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
 
+        sys.channels [ChannelId.Noise].setBuffer (sys.context, sys.crash_buf);
+        sys.channels [ChannelId.Pulse1].setBuffer (sys.context, sys.pulse_buf_50_a4 );
+
         return sys;
     }
 
-    noteOn (channel: number, note: number): void {
-        // the frequency of midi note 'n' is 
-        // 440 * 2^((n-69)/12)
-        // assuming that 440 is the base frequency (which it is for us)
-        const freq_exp = (note - 69) / 12;
-        
-        // however, we don't need the 440 factor, because we will be
-        // dividing by the base frequency of the channel, which is hardcoded
-        // to 440, to compute the playback speed.
-        const playback_speed = Math.pow (2, freq_exp);
-        
-        this.channels 
+    tick (time: number): void {
+        for (let i = 0; i < this.nChannels; i++) {
+            // sound effects pre-empt music
+            const which_proc: SoundProcess = 
+                this.sfx [i].playing ?
+                this.sfx [i] :
+                this.music [i];
+
+            const op = which_proc.tick (time);
+            
+            if (op instanceof NoteOn) {
+                // TODO don't hardcode this in the future
+                this.channels [i].setEnvelope (AdsrEnvelope.beep);
+
+                this.channels [i].noteOn (op.which, time);
+            }
+            else if (op instanceof NoteOff) {
+                // TODO don't hardcode this in the future
+                this.channels [i].setEnvelope (AdsrEnvelope.beep);
+
+                this.channels [i].noteOff (time);
+            }
+            else if (op instanceof NoteNop) {
+                // do nothing
+            }
+            else {
+                throw new Error ("unrecognized sound operation" + op);
+            }
+        }
     }
+
+    get nChannels (): number { return this.channels.length; }
 
     crash (): void {
         this.channels [ChannelId.Noise].setBuffer (this.context, this.crash_buf);
@@ -271,8 +312,176 @@ class SoundSys {
     }
 }
 
+enum SoundOpcode {
+    Op_NoteNop = 0,
+    Op_NoteOn,
+    Op_NoteOff,
+}
+
+// sound commands
+class NoteOn { 
+    which: number;
+    get opcode (): number { return SoundOpcode.Op_NoteOn}
+
+    constructor (which: number) {
+        this.which = which;
+    }
+}
+
+class NoteOff {
+    get opcode (): number { return SoundOpcode.Op_NoteOff}
+}
+
+class NoteNop {
+    get opcode (): number { return SoundOpcode.Op_NoteNop}
+}
+
+type SoundOp = NoteOn | NoteOff | NoteNop;
+
+class SoundCommand {
+    op: SoundOp;
+    when: number;
+
+    constructor (when: number, op: SoundOp) {
+        this.when = when;
+        this.op = op;
+    }
+}
+
+class SoundProcess {
+    ops: SoundCommand [];
+    bpm: number;
+    ip: number = 0; 
+    beats: number = 0;
+    last_update: number = -1;
+    loops: boolean = false;
+
+    constructor (ops: SoundCommand[], bps: number) {
+        this.ops = ops;
+        this.bpm = bps;
+    }
+
+    start (time: number): void {
+        this.last_update = time;
+    }
+
+    get playing (): boolean {
+        return this.last_update >= 0;
+    }
+
+    tick (time: number): SoundOp {
+        if (this.ops.length == 0 || !this.playing) {
+            return new NoteNop;
+        }
+
+        if (this.ip >= this.ops.length && !this.loops) {
+            return new NoteNop;
+        }
+
+        const delta = time - this.last_update;
+        const delta_beats = delta * this.bpm / 60;
+        const top = this.ops [this.ip];
+        this.beats += delta_beats;
+        this.last_update = time;
+
+        console.log (delta, delta_beats)
+
+        if (this.ip == this.ops.length - 1) {
+            if (this.loops) {
+                this.ip = 0;
+            }
+            else {
+                this.ip ++;
+            }
+
+            return top.op;
+        }
+        
+        const next = this.ops [this.ip + 1];
+
+        if (this.beats >= next.when) {
+            this.ip ++;
+        }
+
+        // always make sure we finish the current note
+        // don't return next until it's the current note
+        return top.op;
+    }
+
+    static Nothing: SoundProcess = new SoundProcess ([], 96);
+}
+
+/// Builder for a single channel's sound operations
+class SoundProgBuilder {
+    ops: SoundCommand[];
+    n_beats: number = 0;
+    _bps: number = 96;
+
+    constructor () {
+        this.ops = new Array <SoundCommand> ();
+    }
+
+    n = this.note;
+    r = this.rest;
+
+    get bps (): number { return this._bps; }
+    set bps (n: number) { this._bps = n; }
+
+    /// which note to play and how many beats to play it
+    note (which: number, howLong: number) {
+        const op_on = new SoundCommand (this.n_beats, new NoteOn (which));
+
+        this.n_beats += howLong;
+
+        const op_off = new SoundCommand (this.n_beats, new NoteOff ());
+
+        this.ops.push (op_on, op_off);
+    }
+
+    rest (howLong: number) {
+        this.n_beats += howLong;
+    }
+
+    program (): SoundCommand[] {
+        return this.ops;
+    }
+}
+
+function testSong(): SoundCommand [] {
+    const b = new SoundProgBuilder;
+
+    b.n (72, 1);
+    b.n (74, 1);
+    b.n (76, 1);
+    b.n (77, 1);
+    b.n (79, 2);
+    b.r (1);
+    b.n (79, 1);
+
+    return b.program ();
+}
+
+
 async function soundTest(): Promise <void> {
     const sys = await SoundSys.create ();
 
-    sys.clear1 ();
+    const song = testSong ();
+
+    sys.music [ChannelId.Pulse1] = new SoundProcess (song, 96);
+    sys.music [ChannelId.Pulse1].loops = false;
+    sys.music [ChannelId.Pulse1].start (sys.context.currentTime);
+
+    function tick_audio () {
+        setTimeout (tick_audio, SECS_PER_TICK * 1000);
+        const time = sys.context.currentTime;
+
+        sys.tick (time);
+    }
+
+    // sys.channels [1].noteOn (72, 0);
+    // sys.channels [1].noteOff (0.5);
+    // sys.channels [1].setBuffer (sys.context, sys.pulse_buf_50_a4);
+    // sys.channels [1].setEnvelope (AdsrEnvelope.beep);
+    // sys.channels [1].noteOn (73, 0);
+    tick_audio ();
 }
