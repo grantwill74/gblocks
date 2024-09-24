@@ -268,14 +268,12 @@ class SoundSys {
             const op = which_proc.tick (time);
             
             if (op instanceof NoteOn) {
-                console.log ('on')
                 // TODO don't hardcode this in the future
                 this.channels [i].setEnvelope (AdsrEnvelope.beep);
 
                 this.channels [i].noteOn (op.which, time);
             }
             else if (op instanceof NoteOff) {
-                console.log ('off')
                 // TODO don't hardcode this in the future
                 this.channels [i].setEnvelope (AdsrEnvelope.beep);
 
