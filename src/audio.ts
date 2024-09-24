@@ -358,10 +358,6 @@ class SoundProcess {
     last_update: number = -1;
     loops: boolean = false;
 
-    // becomes true when the top note has been returned by 'tick'
-    // so that we don't process a note mulitple times
-    played: boolean = false;
-
     constructor (ops: SoundCommand[], bpm: number) {
         this.ops = ops;
         this.bpm = bpm;
@@ -482,11 +478,6 @@ async function soundTest(): Promise <void> {
     sys.music [ChannelId.Pulse1] = new SoundProcess (song, 120);
     sys.music [ChannelId.Pulse1].loops = false;
     sys.music [ChannelId.Pulse1].start (sys.context.currentTime);
-
-    //console.log (sys.music [ChannelId.Pulse1].ops.map ((o) => o.op.opcode))
-    //for (let i = 0; i < 3; i += 0.1) {
-    //    console.log (sys.music [ChannelId.Pulse1].tick (i).opcode);
-    //}
 
     function tick_audio () {
         setTimeout (tick_audio, SECS_PER_TICK * 1000);
