@@ -370,10 +370,18 @@ class SoundProcess {
     }
 
     tick (time: number): SoundOp {
-        if (this.ops.length == 0 || !this.playing || 
-            (this.ip >= this.ops.length - 1 && !this.loops)) 
-        {
+        if (this.ops.length == 0 || !this.playing) {
             return new NoteNop;
+        }
+
+        if (this.ip >= this.ops.length - 1) {
+            if (this.loops) {
+                this.ip = -1;
+                this.beats = 0;
+            }
+            else {
+                return new NoteNop;
+            }
         }
 
         console.assert (this.ip >= -1);
@@ -389,17 +397,6 @@ class SoundProcess {
 
         if (its_time_for_next_note) {
             this.ip ++;
-
-            if (this.ip >= this.ops.length) {
-                if (this.loops) {
-                    this.ip = 0;
-                    this.beats = 0;
-                }
-                else {
-                    return new NoteNop;
-                }
-            }
-
             return next.op;
         }
         else {
@@ -407,7 +404,7 @@ class SoundProcess {
         }
     }
 
-    static Nothing: SoundProcess = new SoundProcess ([], 96);
+    static Nothing: SoundProcess = new SoundProcess ([], 0);
 }
 
 /// Builder for a single channel's sound operations
@@ -441,6 +438,19 @@ class SoundProgBuilder {
         this.n_beats += howLong;
     }
 
+    // insert a nop at the end if we end on a rest
+    finish () {
+        if (this.ops.length == 0) {
+            return;
+        }
+
+        const last_op = this.ops [this.ops.length - 1];
+
+        if (last_op.op.opcode == SoundOpcode.NoteOff && last_op.when != this.n_beats) {
+            this.ops.push (new SoundCommand(this.n_beats, new NoteNop))
+        }
+    }
+
     program (): SoundCommand[] {
         return this.ops;
     }
@@ -463,6 +473,7 @@ function testSong(): SoundCommand [] {
     b.r (1.5);
     b.n (79, n8);
     b.r (1.5);
+    b.finish ();
 
     return b.program ();
 }
@@ -473,8 +484,8 @@ async function soundTest(): Promise <void> {
 
     const song = testSong ();
 
-    sys.music [ChannelId.Pulse1] = new SoundProcess (song, 120);
-    sys.music [ChannelId.Pulse1].loops = false;
+    sys.music [ChannelId.Pulse1] = new SoundProcess (song, 164);
+    sys.music [ChannelId.Pulse1].loops = true;
     sys.music [ChannelId.Pulse1].start (sys.context.currentTime);
 
     function tick_audio () {
