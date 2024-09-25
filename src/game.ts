@@ -377,7 +377,7 @@ class PieceState {
         const which_piece = Math.floor (Math.random() * PIECE_SHAPES.length);
         const n_rotations = PIECE_SHAPES[which_piece].length;
         const which_rotation = Math.floor (Math.random() * n_rotations);
-        const which_color = Math.floor (Math.random() * 8) + 1;
+        const which_color = which_piece + 1;
 
         return new PieceState (which_piece, which_rotation, which_color);
     }
