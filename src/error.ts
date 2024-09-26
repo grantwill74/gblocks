@@ -5,7 +5,9 @@ enum FrogErrorKind {
     CreateShader,
     CreateMesh,
     CreateBuffer,
+    CreateTexture,
     BindMesh,
+    BindUniform,
     EnumShader,
     GetActiveElem,
     TooManyVertices,
@@ -32,8 +34,12 @@ function errorText (kind: FrogErrorKind): string {
             return "Error when creating a mesh.";
         case FrogErrorKind.CreateBuffer:
             return "Error when creating a buffer.";
+        case FrogErrorKind.CreateTexture:
+            return "Error when creating a texture.";
         case FrogErrorKind.BindMesh:
             return "Error when binding a vertex array.";
+        case FrogErrorKind.BindUniform:
+            return "Error binding a uniform to a shader.";
         case FrogErrorKind.EnumShader:
             return "Error when enumerating shader info.";
         case FrogErrorKind.GetActiveElem:
