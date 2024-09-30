@@ -198,4 +198,57 @@ const F_SHADER =
     }
 `;
 
+const V_SHADER_TEX =
+    `#version 300 es
+    precision mediump float;
+
+    uniform vec2 tl_loc;        // top left location
+    uniform vec2 tile_dims;     // tile dimensions in NDCs
+
+    in vec2 coords;
+    in vec2 uvs;
+    in uint palette_index;
+
+    flat out uint v_palette_index;
+    out vec2 v_uvs;
+
+    void main() {
+        v_palette_index = palette_index;
+        vec2 coord = tl_loc + tile_dims * coords;
+
+        gl_Position = vec4 (coord, 0.0, 1.0);
+        v_uvs = uvs;
+    }
+    `;
+
+const F_SHADER_TEX =
+    `#version 300 es
+    precision mediump float;
+    precision mediump usampler2D;
+
+    uniform vec3 color_palette[16];
+    uniform usampler2D tex;
+
+    flat in uint v_palette_index;
+    in vec2 v_uvs;
+
+    out vec4 fragcolor;
+
+    void main() {
+        if (v_palette_index == uint (0)) {
+            discard;
+        }
+
+        // sample the texture. there are only 4 brightness levels:
+        // 0: invisible
+        // 1: dim
+        // 2: normal
+        // 3: highlight
+        float samp = float (texture (tex, v_uvs).r) / 3.0;
+
+        fragcolor = vec4 (color_palette[v_palette_index], 1.0) * samp;
+    }
+`;
+
+
 const F_SHADER_PALETTE_SIZE = 16;

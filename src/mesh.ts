@@ -59,11 +59,14 @@ class GridMesh {
     // update them as the board or grid state changes.
     paletteEntryBuffer: WebGLBuffer;
 
+    tex: Texture;
+
     constructor(
         gl: WebGL2RenderingContext, 
         rows: number,
         cols: number,
-        program: Webgl2Program
+        program: Webgl2Program,
+        texture: Texture,
     ) {
         if (rows * cols * 4 >= 0xFFFF) {
             throw new FrogError (FrogErrorKind.TooManyVertices,
@@ -80,7 +83,7 @@ class GridMesh {
         this.paletteEntryBuffer = createWebGlBufferOrThrow (gl);
         const ib = createWebGlBufferOrThrow (gl);
 
-        const coords: number[] = [];
+        const floatdata: number[] = [];
         const colors: number[] = new Array <number> (rows * cols);
         const indis: number[] = [];
         let i = 0;
@@ -88,11 +91,11 @@ class GridMesh {
         
         for (let row = 0; row > -rows; row--) {
             for (let col = 0; col < cols; col++) {
-                coords.push (
-                    col, row,              // top left
-                    col, row - 1,          // bottom left
-                    col + 1, row,          // top right
-                    col + 1, row - 1,      // bottom right
+                floatdata.push (
+                    col, row, 0, 0,         // top left
+                    col, row - 1, 1, 0,     // bottom left
+                    col + 1, row, 0, 1,     // top right
+                    col + 1, row - 1, 1, 1, // bottom right
                 );
 
                 colors.push (0, 0, 0, 0);
@@ -102,15 +105,19 @@ class GridMesh {
             }
         }
 
+        const FLOAT_STRIDE = 16;
+
         gl.bindBuffer (gl.ARRAY_BUFFER, verts);
-        gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (coords), gl.STATIC_DRAW);
-        gl.vertexAttribPointer (0, 2, gl.FLOAT, false, 0, 0);
+        gl.bufferData (gl.ARRAY_BUFFER, new Float32Array (floatdata), gl.STATIC_DRAW);
+        gl.vertexAttribPointer (0, 2, gl.FLOAT, false, FLOAT_STRIDE, 0);
+        gl.vertexAttribPointer (1, 2, gl.FLOAT, false, FLOAT_STRIDE, 8);
         gl.enableVertexAttribArray (0);
+        gl.enableVertexAttribArray (1);
 
         gl.bindBuffer (gl.ARRAY_BUFFER, this.paletteEntryBuffer);
         gl.bufferData (gl.ARRAY_BUFFER, new Uint8Array (colors), gl.DYNAMIC_DRAW);
-        gl.vertexAttribIPointer (1, 1, gl.UNSIGNED_BYTE, 0, 0);
-        gl.enableVertexAttribArray (1);
+        gl.vertexAttribIPointer (2, 1, gl.UNSIGNED_BYTE, 0, 0);
+        gl.enableVertexAttribArray (2);
 
         
         gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, ib);
@@ -126,7 +133,9 @@ class GridMesh {
         gl.bindBuffer (gl.ARRAY_BUFFER, null);
         gl.bindBuffer (gl.ELEMENT_ARRAY_BUFFER, null);
 
-        console.assert (!gl.getError());
+        this.tex = texture;
+
+        assertGlClear (gl.getError());
     }
 
     /// given a list of tile colors, update the palette color vertex attributes
@@ -143,7 +152,7 @@ class GridMesh {
         gl.bufferData (gl.ARRAY_BUFFER, new Uint8Array (attribs), gl.DYNAMIC_DRAW);
         gl.bindBuffer (gl.ARRAY_BUFFER, null);
 
-        console.assert (!gl.getError());
+        assertGlClear (gl.getError());
     }
 
     updateColorsFromBits (
