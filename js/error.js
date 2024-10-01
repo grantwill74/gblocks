@@ -7,11 +7,13 @@ var FrogErrorKind;
     FrogErrorKind[FrogErrorKind["CreateShader"] = 3] = "CreateShader";
     FrogErrorKind[FrogErrorKind["CreateMesh"] = 4] = "CreateMesh";
     FrogErrorKind[FrogErrorKind["CreateBuffer"] = 5] = "CreateBuffer";
-    FrogErrorKind[FrogErrorKind["BindMesh"] = 6] = "BindMesh";
-    FrogErrorKind[FrogErrorKind["EnumShader"] = 7] = "EnumShader";
-    FrogErrorKind[FrogErrorKind["GetActiveElem"] = 8] = "GetActiveElem";
-    FrogErrorKind[FrogErrorKind["TooManyVertices"] = 9] = "TooManyVertices";
-    FrogErrorKind[FrogErrorKind["LoadingColorPalette"] = 10] = "LoadingColorPalette";
+    FrogErrorKind[FrogErrorKind["CreateTexture"] = 6] = "CreateTexture";
+    FrogErrorKind[FrogErrorKind["BindMesh"] = 7] = "BindMesh";
+    FrogErrorKind[FrogErrorKind["BindUniform"] = 8] = "BindUniform";
+    FrogErrorKind[FrogErrorKind["EnumShader"] = 9] = "EnumShader";
+    FrogErrorKind[FrogErrorKind["GetActiveElem"] = 10] = "GetActiveElem";
+    FrogErrorKind[FrogErrorKind["TooManyVertices"] = 11] = "TooManyVertices";
+    FrogErrorKind[FrogErrorKind["LoadingColorPalette"] = 12] = "LoadingColorPalette";
 })(FrogErrorKind || (FrogErrorKind = {}));
 function unreachable() {
     throw new Error("Unreachable code was reached.");
@@ -32,8 +34,12 @@ function errorText(kind) {
             return "Error when creating a mesh.";
         case FrogErrorKind.CreateBuffer:
             return "Error when creating a buffer.";
+        case FrogErrorKind.CreateTexture:
+            return "Error when creating a texture.";
         case FrogErrorKind.BindMesh:
             return "Error when binding a vertex array.";
+        case FrogErrorKind.BindUniform:
+            return "Error binding a uniform to a shader.";
         case FrogErrorKind.EnumShader:
             return "Error when enumerating shader info.";
         case FrogErrorKind.GetActiveElem:
