@@ -194,6 +194,7 @@ class AudioChannel {
 enum ChannelId {
     Noise = 0,
     Pulse1 = 1,
+    Pulse2 = 2,
 }
 
 class SoundSys {
@@ -224,6 +225,7 @@ class SoundSys {
         this.channels = new Array <AudioChannel> (2);
         this.channels [ChannelId.Noise] = new AudioChannel (context);
         this.channels [ChannelId.Pulse1] = new AudioChannel (context);
+        this.channels [ChannelId.Pulse2] = new AudioChannel (context);
 
         this.music = this.channels.map ((_) => SoundProcess.Nothing);
         this.sfx = this.channels.map ((_) => SoundProcess.Nothing);
@@ -249,10 +251,12 @@ class SoundSys {
 
         sys.channels [ChannelId.Noise].gain.connect (sys.master_gain);
         sys.channels [ChannelId.Pulse1].gain.connect (sys.master_gain);
+        sys.channels [ChannelId.Pulse2].gain.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
 
         sys.channels [ChannelId.Noise].setBuffer (sys.context, sys.crash_buf);
-        sys.channels [ChannelId.Pulse1].setBuffer (sys.context, sys.pulse_buf_50_a4 );
+        sys.channels [ChannelId.Pulse1].setBuffer (sys.context, sys.pulse_buf_50_a4);
+        sys.channels [ChannelId.Pulse2].setBuffer (sys.context, sys.pulse_buf_25_a4);
 
         return sys;
     }
@@ -478,15 +482,134 @@ function testSong(): SoundCommand [] {
     return b.program ();
 }
 
+function slavonicDances(): SoundCommand[] {
+    const b = new SoundProgBuilder;
+
+    const n4 = 1;
+    const n8 = n4 / 2;
+    const n16 = n8 / 2;
+    const n8d = n8 + n16;
+    
+
+    function p0 () {
+        b.n (79, n8);
+        b.r (n8);
+        b.n (72, n8);
+        b.r (n8);
+        b.n (74, n8);
+        b.n (75, n8);
+        b.n (72, n8);
+        b.r (.5);
+    }
+
+    function p1 () {
+        b.n (77, n8d);
+        b.n (79, n16);
+        b.n (77, n16);
+        b.r (n16);
+        b.n (75, n16);
+        b.r (n16);
+        b.n (74, n16);
+        b.r (n16);
+        b.n (72, n16);
+        b.r (n16);
+        b.n (70, n8);
+        b.r (n8);
+    }
+
+    function p2 () {
+        b.n (75, n8d);
+        b.n (77, n16);
+        b.n (75, n16);
+        b.r (n16);
+        b.n (73, n16);
+        b.r (n16);
+        b.n (72, n16);
+        b.r (n16);
+        b.n (70, n16);
+        b.r (n16);
+        b.n (68, n8);
+        b.r (n8);
+    }
+
+    function p3 () {
+        b.n (71, n8);
+        b.n (69, n8);
+        b.n (71, n8);
+        b.n (72, n8);
+        b.n (74, n4);
+        b.n (67, n8);
+        b.r (n8);
+    }
+
+    function p4 () {
+        b.n (72, n16);
+        b.r (n16);
+        b.n (70, n16);
+        b.r (n16);
+        b.n (68, n8);
+        b.r (n8);
+    }
+
+    function p5 () {
+        b.n (67, n16);
+        b.r (n16);
+        b.n (65, n16);
+        b.r (n16);
+        b.n (63, n8);
+        b.r (n8);
+    }
+
+    function p6 () {
+        b.n (65, n4);
+        b.n (62, n4);
+        b.n (60, n4);
+        b.n (58, n4);
+    }
+
+    p0 (); 
+    p0 ();
+
+    p1 (); 
+    p1 ();
+
+    p2 (); 
+    p2 ();
+
+    p3 ();
+    p3 ();
+
+    p0 (); 
+    p0 ();
+
+    p1 (); 
+    p1 ();
+
+    p2 (); 
+    p2 ();
+
+    p4 (); 
+    p4 ();
+
+    p5 ();
+    p5 ();
+
+    p6 ();
+
+    b.finish ();
+
+    return b.program ();
+}
+
 
 async function soundTest(): Promise <void> {
     const sys = await SoundSys.create ();
 
-    const song = testSong ();
+    const song = slavonicDances ();
 
-    sys.music [ChannelId.Pulse1] = new SoundProcess (song, 164);
-    sys.music [ChannelId.Pulse1].loops = true;
-    sys.music [ChannelId.Pulse1].start (sys.context.currentTime);
+    sys.music [ChannelId.Pulse2] = new SoundProcess (song, 120);
+    sys.music [ChannelId.Pulse2].loops = true;
+    sys.music [ChannelId.Pulse2].start (sys.context.currentTime);
 
     function tick_audio () {
         setTimeout (tick_audio, SECS_PER_TICK * 1000);
