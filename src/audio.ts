@@ -85,6 +85,36 @@ async function genPulseWave (
     return buffer;
 }
 
+async function genTriangleWave (
+    context: AudioContext, 
+    freq: number,
+    duration: number
+) : Promise <AudioBuffer>
+{
+    const buffer = context.createBuffer (
+        1, SAMPLE_RATE * duration, SAMPLE_RATE);
+    
+    const buf_data = buffer.getChannelData (0);
+    const seconds_per_cycle = 1 / freq;
+    const samples_per_cycle = seconds_per_cycle * SAMPLE_RATE;
+    const samples_per_quarter_cycle = Math.floor (samples_per_cycle / 4);
+    const slope = 1 / samples_per_quarter_cycle;
+
+    for (let i = 0; i < buf_data.length; i++) {
+        if (i < samples_per_quarter_cycle) {
+            buf_data [i] = slope * i;
+        }
+        else if (i < 3 * samples_per_quarter_cycle) {
+            buf_data [i] = 1 - slope * i;
+        }
+        else {
+            buf_data [i] = slope * (i % samples_per_quarter_cycle) - 1;
+        }
+    }
+
+    return buffer;
+}
+
 class AdsrEnvelope {
     attackTime: number;
     attackLevel: number;
@@ -195,6 +225,7 @@ enum ChannelId {
     Noise = 0,
     Pulse1 = 1,
     Pulse2 = 2,
+    Triangle = 3,
 }
 
 class SoundSys {
@@ -203,6 +234,7 @@ class SoundSys {
     crash_buf: AudioBuffer;
     pulse_buf_50_a4: AudioBuffer;
     pulse_buf_25_a4: AudioBuffer;
+    triangle_buf: AudioBuffer;
 
     channels: AudioChannel[];
     music: SoundProcess[];
@@ -215,17 +247,20 @@ class SoundSys {
         crash_buf: AudioBuffer,
         pulse_buf_50_a4: AudioBuffer,
         pulse_buf_25_a4: AudioBuffer,
+        triangle_buf: AudioBuffer,
     ) {
         this.context = context;
 
         this.crash_buf = crash_buf;
         this.pulse_buf_50_a4 = pulse_buf_50_a4;
         this.pulse_buf_25_a4 = pulse_buf_25_a4;
+        this.triangle_buf = triangle_buf;
 
         this.channels = new Array <AudioChannel> (2);
         this.channels [ChannelId.Noise] = new AudioChannel (context);
         this.channels [ChannelId.Pulse1] = new AudioChannel (context);
         this.channels [ChannelId.Pulse2] = new AudioChannel (context);
+        this.channels [ChannelId.Triangle] = new AudioChannel (context);
 
         this.music = this.channels.map ((_) => SoundProcess.Nothing);
         this.sfx = this.channels.map ((_) => SoundProcess.Nothing);
@@ -238,13 +273,15 @@ class SoundSys {
 
         const crash_buf_prom = genWhiteNoise (context, 4);
         const pulse_buf_prom = genPulseWave (context, 0.5, 440, 4);
-        const pulse_buf_25_prom = genPulseWave (context, 0.25, 440, 4)
+        const pulse_buf_25_prom = genPulseWave (context, 0.25, 440, 4);
+        const triangle_buf_prom = genTriangleWave (context, 440, 4);
         
         const sys = new SoundSys (
             context, 
             await crash_buf_prom,
             await pulse_buf_prom,
             await pulse_buf_25_prom,
+            await triangle_buf_prom,
         );
 
         sys.master_gain.gain.setValueAtTime (.25, 0);
@@ -252,11 +289,14 @@ class SoundSys {
         sys.channels [ChannelId.Noise].gain.connect (sys.master_gain);
         sys.channels [ChannelId.Pulse1].gain.connect (sys.master_gain);
         sys.channels [ChannelId.Pulse2].gain.connect (sys.master_gain);
+        sys.channels [ChannelId.Triangle].gain.connect (sys.master_gain);
         sys.master_gain.connect (context.destination);
 
         sys.channels [ChannelId.Noise].setBuffer (sys.context, sys.crash_buf);
         sys.channels [ChannelId.Pulse1].setBuffer (sys.context, sys.pulse_buf_50_a4);
-        sys.channels [ChannelId.Pulse2].setBuffer (sys.context, sys.pulse_buf_25_a4);
+        //sys.channels [ChannelId.Pulse2].setBuffer (sys.context, sys.pulse_buf_25_a4);
+        sys.channels [ChannelId.Pulse2].setBuffer (sys.context, sys.pulse_buf_50_a4);
+        sys.channels [ChannelId.Triangle].setBuffer (sys.context, sys.triangle_buf);
 
         return sys;
     }
@@ -601,15 +641,52 @@ function slavonicDances(): SoundCommand[] {
     return b.program ();
 }
 
+function slavonicDancesBass(): SoundCommand[] {
+    const b = new SoundProgBuilder;
+
+    const n4 = 1;
+    const n8 = n4 / 2;
+    const n16 = n8 / 2;
+    const n8d = n8 + n16;
+
+    function p0 () {
+        b.n (24, n8);
+        b.r (n8);
+        b.n (19, n8);
+        b.r (n8);
+    }
+
+    function p1 () {
+        b.n (22, n8);
+        b.r (n8);
+        b.n (17, n8);
+        b.r (n8);
+    }
+
+    p0 (); p0 (); p0 (); p0 ();
+
+    p1 (); p1 (); p1 (); p1 ();
+
+    b.finish ();
+
+    return b.program ();
+}
 
 async function soundTest(): Promise <void> {
     const sys = await SoundSys.create ();
 
-    const song = slavonicDances ();
+    const melody = slavonicDances ();
+    const bass = slavonicDancesBass ();
 
-    sys.music [ChannelId.Pulse2] = new SoundProcess (song, 120);
+    sys.music [ChannelId.Pulse2] = new SoundProcess (melody, 120);
     sys.music [ChannelId.Pulse2].loops = true;
-    sys.music [ChannelId.Pulse2].start (sys.context.currentTime);
+
+    sys.music [ChannelId.Triangle] = new SoundProcess (bass, 120);
+    sys.music [ChannelId.Triangle].loops = true;
+
+    const t = sys.context.currentTime;
+    sys.music [ChannelId.Pulse2].start (t);
+    sys.music [ChannelId.Triangle].start (t);
 
     function tick_audio () {
         setTimeout (tick_audio, SECS_PER_TICK * 1000);

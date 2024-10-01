@@ -69,6 +69,12 @@ async function run(): Promise<void> {
         const keys = new Keyboard ();
         const sound = await sound_prom;
 
+        const song = slavonicDances ();
+
+        sound.music [ChannelId.Pulse2] = new SoundProcess (song, 120);
+        sound.music [ChannelId.Pulse2].loops = true;
+        sound.music [ChannelId.Pulse2].start (sound.context.currentTime);
+
         function tick (_now: number) {
             setTimeout (tick, SECS_PER_TICK * 1000);
 
@@ -101,6 +107,7 @@ async function run(): Promise<void> {
             }
 
             game.tick (commands);
+            sound.tick (sound.context.currentTime);
         }
 
         function render (_now: number) {
