@@ -71,7 +71,7 @@ async function run(): Promise<void> {
 
         const song = slavonicDances ();
 
-        sound.music [ChannelId.Pulse2] = new SoundProcess (song, 120);
+        sound.music [ChannelId.Pulse2] = new SoundProcess (song, 160);
         sound.music [ChannelId.Pulse2].loops = true;
         sound.music [ChannelId.Pulse2].start (sound.context.currentTime);
 

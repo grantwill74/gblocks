@@ -678,15 +678,15 @@ async function soundTest(): Promise <void> {
     const melody = slavonicDances ();
     const bass = slavonicDancesBass ();
 
-    sys.music [ChannelId.Pulse2] = new SoundProcess (melody, 120);
+    sys.music [ChannelId.Pulse2] = new SoundProcess (melody, 160);
     sys.music [ChannelId.Pulse2].loops = true;
 
-    sys.music [ChannelId.Triangle] = new SoundProcess (bass, 120);
+    sys.music [ChannelId.Triangle] = new SoundProcess (bass, 160);
     sys.music [ChannelId.Triangle].loops = true;
 
     const t = sys.context.currentTime;
     sys.music [ChannelId.Pulse2].start (t);
-    sys.music [ChannelId.Triangle].start (t);
+    // sys.music [ChannelId.Triangle].start (t);
 
     function tick_audio () {
         setTimeout (tick_audio, SECS_PER_TICK * 1000);
