@@ -55,6 +55,10 @@ function run() {
             const renderer = new InGameRenderer(gl, FIELD_ROWS, FIELD_COLS, field_x_ndc, field_y_ndc);
             const keys = new Keyboard();
             const sound = yield sound_prom;
+            const song = slavonicDances();
+            sound.music[ChannelId.Pulse2] = new SoundProcess(song, 160);
+            sound.music[ChannelId.Pulse2].loops = true;
+            sound.music[ChannelId.Pulse2].start(sound.context.currentTime);
             function tick(_now) {
                 setTimeout(tick, SECS_PER_TICK * 1000);
                 if (game.events & GameEvent.PieceCollision) {
@@ -83,6 +87,7 @@ function run() {
                     commands |= GameCommand.PieceRotateR;
                 }
                 game.tick(commands);
+                sound.tick(sound.context.currentTime);
             }
             function render(_now) {
                 requestAnimationFrame(render);

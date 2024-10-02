@@ -74,6 +74,28 @@ function genPulseWave(context, duty, freq, duration) {
         return buffer;
     });
 }
+function genTriangleWave(context, freq, duration) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const buffer = context.createBuffer(1, SAMPLE_RATE * duration, SAMPLE_RATE);
+        const buf_data = buffer.getChannelData(0);
+        const seconds_per_cycle = 1 / freq;
+        const samples_per_cycle = seconds_per_cycle * SAMPLE_RATE;
+        const samples_per_quarter_cycle = Math.floor(samples_per_cycle / 4);
+        const slope = 1 / samples_per_quarter_cycle;
+        for (let i = 0; i < buf_data.length; i++) {
+            if (i < samples_per_quarter_cycle) {
+                buf_data[i] = slope * i;
+            }
+            else if (i < 3 * samples_per_quarter_cycle) {
+                buf_data[i] = 1 - slope * i;
+            }
+            else {
+                buf_data[i] = slope * (i % samples_per_quarter_cycle) - 1;
+            }
+        }
+        return buffer;
+    });
+}
 class AdsrEnvelope {
     constructor(attackTime, attackLevel, decayTime, sustainLevel, releaseTime) {
         this.attackTime = attackTime;
@@ -141,16 +163,21 @@ var ChannelId;
 (function (ChannelId) {
     ChannelId[ChannelId["Noise"] = 0] = "Noise";
     ChannelId[ChannelId["Pulse1"] = 1] = "Pulse1";
+    ChannelId[ChannelId["Pulse2"] = 2] = "Pulse2";
+    ChannelId[ChannelId["Triangle"] = 3] = "Triangle";
 })(ChannelId || (ChannelId = {}));
 class SoundSys {
-    constructor(context, crash_buf, pulse_buf_50_a4, pulse_buf_25_a4) {
+    constructor(context, crash_buf, pulse_buf_50_a4, pulse_buf_25_a4, triangle_buf) {
         this.context = context;
         this.crash_buf = crash_buf;
         this.pulse_buf_50_a4 = pulse_buf_50_a4;
         this.pulse_buf_25_a4 = pulse_buf_25_a4;
+        this.triangle_buf = triangle_buf;
         this.channels = new Array(2);
         this.channels[ChannelId.Noise] = new AudioChannel(context);
         this.channels[ChannelId.Pulse1] = new AudioChannel(context);
+        this.channels[ChannelId.Pulse2] = new AudioChannel(context);
+        this.channels[ChannelId.Triangle] = new AudioChannel(context);
         this.music = this.channels.map((_) => SoundProcess.Nothing);
         this.sfx = this.channels.map((_) => SoundProcess.Nothing);
         this.master_gain = context.createGain();
@@ -161,13 +188,19 @@ class SoundSys {
             const crash_buf_prom = genWhiteNoise(context, 4);
             const pulse_buf_prom = genPulseWave(context, 0.5, 440, 4);
             const pulse_buf_25_prom = genPulseWave(context, 0.25, 440, 4);
-            const sys = new SoundSys(context, yield crash_buf_prom, yield pulse_buf_prom, yield pulse_buf_25_prom);
+            const triangle_buf_prom = genTriangleWave(context, 440, 4);
+            const sys = new SoundSys(context, yield crash_buf_prom, yield pulse_buf_prom, yield pulse_buf_25_prom, yield triangle_buf_prom);
             sys.master_gain.gain.setValueAtTime(.25, 0);
             sys.channels[ChannelId.Noise].gain.connect(sys.master_gain);
             sys.channels[ChannelId.Pulse1].gain.connect(sys.master_gain);
+            sys.channels[ChannelId.Pulse2].gain.connect(sys.master_gain);
+            sys.channels[ChannelId.Triangle].gain.connect(sys.master_gain);
             sys.master_gain.connect(context.destination);
             sys.channels[ChannelId.Noise].setBuffer(sys.context, sys.crash_buf);
             sys.channels[ChannelId.Pulse1].setBuffer(sys.context, sys.pulse_buf_50_a4);
+            //sys.channels [ChannelId.Pulse2].setBuffer (sys.context, sys.pulse_buf_25_a4);
+            sys.channels[ChannelId.Pulse2].setBuffer(sys.context, sys.pulse_buf_50_a4);
+            sys.channels[ChannelId.Triangle].setBuffer(sys.context, sys.triangle_buf);
             return sys;
         });
     }
@@ -340,13 +373,144 @@ function testSong() {
     b.finish();
     return b.program();
 }
+function slavonicDances() {
+    const b = new SoundProgBuilder;
+    const n4 = 1;
+    const n8 = n4 / 2;
+    const n16 = n8 / 2;
+    const n8d = n8 + n16;
+    function p0() {
+        b.n(79, n8);
+        b.r(n8);
+        b.n(72, n8);
+        b.r(n8);
+        b.n(74, n8);
+        b.n(75, n8);
+        b.n(72, n8);
+        b.r(.5);
+    }
+    function p1() {
+        b.n(77, n8d);
+        b.n(79, n16);
+        b.n(77, n16);
+        b.r(n16);
+        b.n(75, n16);
+        b.r(n16);
+        b.n(74, n16);
+        b.r(n16);
+        b.n(72, n16);
+        b.r(n16);
+        b.n(70, n8);
+        b.r(n8);
+    }
+    function p2() {
+        b.n(75, n8d);
+        b.n(77, n16);
+        b.n(75, n16);
+        b.r(n16);
+        b.n(73, n16);
+        b.r(n16);
+        b.n(72, n16);
+        b.r(n16);
+        b.n(70, n16);
+        b.r(n16);
+        b.n(68, n8);
+        b.r(n8);
+    }
+    function p3() {
+        b.n(71, n8);
+        b.n(69, n8);
+        b.n(71, n8);
+        b.n(72, n8);
+        b.n(74, n4);
+        b.n(67, n8);
+        b.r(n8);
+    }
+    function p4() {
+        b.n(72, n16);
+        b.r(n16);
+        b.n(70, n16);
+        b.r(n16);
+        b.n(68, n8);
+        b.r(n8);
+    }
+    function p5() {
+        b.n(67, n16);
+        b.r(n16);
+        b.n(65, n16);
+        b.r(n16);
+        b.n(63, n8);
+        b.r(n8);
+    }
+    function p6() {
+        b.n(65, n4);
+        b.n(62, n4);
+        b.n(60, n4);
+        b.n(58, n4);
+    }
+    p0();
+    p0();
+    p1();
+    p1();
+    p2();
+    p2();
+    p3();
+    p3();
+    p0();
+    p0();
+    p1();
+    p1();
+    p2();
+    p2();
+    p4();
+    p4();
+    p5();
+    p5();
+    p6();
+    b.finish();
+    return b.program();
+}
+function slavonicDancesBass() {
+    const b = new SoundProgBuilder;
+    const n4 = 1;
+    const n8 = n4 / 2;
+    const n16 = n8 / 2;
+    const n8d = n8 + n16;
+    function p0() {
+        b.n(24, n8);
+        b.r(n8);
+        b.n(19, n8);
+        b.r(n8);
+    }
+    function p1() {
+        b.n(22, n8);
+        b.r(n8);
+        b.n(17, n8);
+        b.r(n8);
+    }
+    p0();
+    p0();
+    p0();
+    p0();
+    p1();
+    p1();
+    p1();
+    p1();
+    b.finish();
+    return b.program();
+}
 function soundTest() {
     return __awaiter(this, void 0, void 0, function* () {
         const sys = yield SoundSys.create();
-        const song = testSong();
-        sys.music[ChannelId.Pulse1] = new SoundProcess(song, 164);
-        sys.music[ChannelId.Pulse1].loops = true;
-        sys.music[ChannelId.Pulse1].start(sys.context.currentTime);
+        const melody = slavonicDances();
+        const bass = slavonicDancesBass();
+        sys.music[ChannelId.Pulse2] = new SoundProcess(melody, 160);
+        sys.music[ChannelId.Pulse2].loops = true;
+        sys.music[ChannelId.Triangle] = new SoundProcess(bass, 160);
+        sys.music[ChannelId.Triangle].loops = true;
+        const t = sys.context.currentTime;
+        sys.music[ChannelId.Pulse2].start(t);
+        // sys.music [ChannelId.Triangle].start (t);
         function tick_audio() {
             setTimeout(tick_audio, SECS_PER_TICK * 1000);
             const time = sys.context.currentTime;
